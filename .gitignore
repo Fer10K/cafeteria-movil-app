@@ -16,7 +16,6 @@ captures/
 *.apk
 output-metadata.json
 
-# IntelliJ
 *.iml
 .idea/
 misc.xml
@@ -33,3 +32,26 @@ google-services.json
 # Android Profiling
 *.hprof
 gradle/gradle-daemon-jvm.properties
+
+CafeteriaAndroidStudio/local.properties
+CafeteriaAndroidStudio/.gradle/
+CafeteriaAndroidStudio/build/
+CafeteriaAndroidStudio/captures/
+
+# ==========================================
+# REGLAS PARA EL BACKEND (Python & Docker)
+# ==========================================
+
+# Archivos de configuración local y credenciales secretas (¡CRÍTICO!)
+CafeteriaBackend/.env
+CafeteriaBackend/.env.*
+!CafeteriaBackend/.env.example
+
+# Caché de Python y compilados
+CafeteriaBackend/__pycache__/
+CafeteriaBackend/*.py[cod]
+CafeteriaBackend/*$py.class
+CafeteriaBackend/.pytest_cache/
+
+# Docker logs
+CafeteriaBackend/*.log
