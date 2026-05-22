@@ -2,14 +2,16 @@ package com.example.cafeteriaapp.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.cafeteria.data.model.ProcesarCompraResponse
 import com.example.cafeteria.data.model.ProcesarCompraRequest
+import com.example.cafeteria.data.model.ProcesarCompraResponse
 import com.example.cafeteriaapp.data.remote.RetrofitClient
+import com.example.cafeteriaapp.domain.model.HistorialCompraItem
+import com.example.cafeteriaapp.domain.model.Producto
+import com.example.cafeteriaapp.domain.model.RecomendacionRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// Representa los diferentes estados de la pantalla al interactuar con el backend
 sealed interface GamificationUiState {
     object Idle : GamificationUiState
     object Loading : GamificationUiState
@@ -17,14 +19,21 @@ sealed interface GamificationUiState {
     data class Error(val message: String) : GamificationUiState
 }
 
+
+sealed interface AiUiState {
+    object Idle : AiUiState
+    object Loading : AiUiState
+    data class Success(val sugerencia: String): AiUiState
+    data class Error(val message: String) : AiUiState
+}
 class CafeteriaViewModel : ViewModel() {
 
-    // El estado privado mutable y el público inmutable que leerá la vista
+
+    //ENVIAR AL BACK
     private val _uiState = MutableStateFlow<GamificationUiState>(GamificationUiState.Idle)
     val uiState: StateFlow<GamificationUiState> = _uiState
 
     fun enviarCompraAlBackend(usuarioId: String, monto: Double, cantidad: Int) {
-        // viewModelScope amarra la corrutina al ciclo de vida del ViewModel de forma segura
         viewModelScope.launch {
             _uiState.value = GamificationUiState.Loading
             try {
@@ -38,14 +47,39 @@ class CafeteriaViewModel : ViewModel() {
                 val response = RetrofitClient.apiService.procesarCompra(requestData)
 
                 if (response.isSuccessful && response.body() != null) {
-                    // Informamos a la UI que todo salió bien mandando los datos de XP y Nivel
                     _uiState.value = GamificationUiState.Success(response.body()!!)
                 } else {
                     _uiState.value = GamificationUiState.Error("Error del servidor: ${response.code()}")
                 }
             } catch (e: Exception) {
-                // Captura fallos de red (ej: el Docker está apagado o no hay internet)
                 _uiState.value = GamificationUiState.Error("Fallo de red: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    //CONSULTA A LA IA
+    private val _aiState = MutableStateFlow<AiUiState>(AiUiState.Idle)
+    val aiState: StateFlow<AiUiState> = _aiState
+
+    fun pedirRecomendacionAMenu(usuarioId: String, historial: List<HistorialCompraItem>, disponibles: List<Producto>) {
+        viewModelScope.launch {
+            _aiState.value = AiUiState.Loading
+            try {
+                val requestData = RecomendacionRequest(
+                    usuario_id = usuarioId,
+                    historial = historial,
+                    productos_disponibles = disponibles
+                )
+
+                val response = RetrofitClient.apiService.obtenerRecomendacionIA(requestData)
+
+                if (response.isSuccessful && response.body() != null) {
+                    _aiState.value = AiUiState.Success(response.body()!!.recomendacion)
+                } else {
+                    _aiState.value = AiUiState.Error("Gemini no pudo procesar la recomendación.")
+                }
+            } catch (e: Exception) {
+                _aiState.value = AiUiState.Error("Fallo de red al conectar con la IA: ${e.localizedMessage}")
             }
         }
     }

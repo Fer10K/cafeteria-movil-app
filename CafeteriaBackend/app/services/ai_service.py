@@ -4,7 +4,7 @@ from app.config import settings
 class AIService:
     def __init__(self):
         genai.configure(api_key=settings.gemini_api_key)
-        self.model = genai.GenerativeModel("gemini-2.5-flash")
+        self.model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
     async def obtener_recomendacion_menu(self, historial_usuario: list, productos_disponibles: list) -> str:
         """
@@ -33,5 +33,5 @@ class AIService:
             response = await self.model.generate_content_async(prompt)
             return response.text.strip()
         except Exception as e:
-            print(f"❌ Error al conectar con Gemini API: {e}")
+            print(f"❌ Error al conectar con Gemini API: {e}", flush=True)
             return "¡Hola! Hoy te recomendamos revisar los especiales del día en nuestra barra principal. ¡Buen provecho!"

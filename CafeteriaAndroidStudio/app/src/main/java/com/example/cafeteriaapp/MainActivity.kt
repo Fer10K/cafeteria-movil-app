@@ -3,45 +3,25 @@ package com.example.cafeteriaapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import com.example.cafeteria.ui.screen.DetalleCompraScreen
+import com.example.cafeteriaapp.ui.screen.RecomendacionScreen
+import com.example.cafeteriaapp.ui.screen.RegistroScreen
 import com.example.cafeteriaapp.ui.theme.CafeteriaAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            CafeteriaAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            RegistroScreen(
+                onRegistroExitoso = { uuidGenerado ->
+                    // Aquí meterás la navegación hacia el menú principal o catálogo
+                    println("🏆 Usuario registrado con UUID: $uuidGenerado. Listo para guardar en sesión local.") }
+            )
+
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    CafeteriaAppTheme {
-        Greeting("Android")
     }
 }
