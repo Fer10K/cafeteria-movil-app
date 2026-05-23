@@ -3,14 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import supabase
 from app.services.ai_service import AIService
+from app.services.gamification_service import GamificationService
+from app.services.auth_service import RegisterService
 from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse
 from app.schemas.gamification_schema import ProcesarCompraRequest, ProcesarCompraResponse
-from app.services.gamification_service import GamificationService
+from app.schemas.register_schema import RegistroUsuarioResponse, RegistroUsuarioInput
 
 
 # services
 ai_service = AIService()
 gamification_service = GamificationService()
+auth_service = RegisterService()
 
 # 3. Inicializar la aplicación FastAPI
 app = FastAPI(
@@ -69,6 +72,20 @@ async def procesar_compra_estudiante(payload: ProcesarCompraRequest):
     """
     try:
         resultado = await gamification_service.procesar_transaccion(payload)
+        return resultado
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+#Endpoint para el registro
+@app.post("/auth/registro", response_model=RegistroUsuarioResponse, tags=["Autenticación"])
+async def registrar_estudiante(payload: RegistroUsuarioInput):
+    """
+    Endpoint para el registro de nuevos alumnos. Crea las credenciales en 
+    Supabase Auth, genera el perfil público e inicializa su gamificación.
+    """
+    try:
+        resultado = await auth_service.registrar_estudiante(payload)
         return resultado
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

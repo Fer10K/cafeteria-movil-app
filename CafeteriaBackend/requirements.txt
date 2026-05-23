@@ -3,4 +3,5 @@ uvicorn==0.34.0
 supabase
 pydantic==2.10.6
 pydantic-settings==2.8.1
+pydantic[email]
 google-generativeai
