@@ -12,3 +12,13 @@ data class RegistroResponse(
     @SerializedName("usuario_id") val usuarioId: String,
     @SerializedName("mensaje") val mensaje: String
 )
+
+data class LoginRequest(
+    val correo: String,
+    val password: String)
+data class LoginResponse(
+    val usuario_id: String,
+    val nombre_completo: String,
+    val correo: String,
+    val mensaje: String
+)

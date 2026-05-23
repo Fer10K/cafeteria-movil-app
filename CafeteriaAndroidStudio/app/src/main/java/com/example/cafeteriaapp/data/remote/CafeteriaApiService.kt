@@ -6,6 +6,8 @@ import com.example.cafeteriaapp.domain.model.RecomendacionRequest
 import com.example.cafeteriaapp.domain.model.RecomendacionResponse
 import com.example.cafeteriaapp.domain.model.RegistroRequest
 import com.example.cafeteriaapp.domain.model.RegistroResponse
+import com.example.cafeteriaapp.domain.model.LoginRequest
+import com.example.cafeteriaapp.domain.model.LoginResponse
 
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -27,4 +29,9 @@ interface CafeteriaApiService {
     suspend fun registrarUsuario(
         @Body request: RegistroRequest
     ): retrofit2.Response<RegistroResponse>
+
+    @POST( "/auth/login")
+    suspend fun loginUsuario(
+        @Body request: LoginRequest
+    ): retrofit2.Response<LoginResponse>
 }

@@ -4,16 +4,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import supabase
 from app.services.ai_service import AIService
 from app.services.gamification_service import GamificationService
-from app.services.auth_service import RegisterService
+from app.services.auth_service import AuthService
 from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse
 from app.schemas.gamification_schema import ProcesarCompraRequest, ProcesarCompraResponse
 from app.schemas.register_schema import RegistroUsuarioResponse, RegistroUsuarioInput
+from app.schemas.login_schema import LoginUsuarioInput, LoginUsuarioResponse
 
 
 # services
 ai_service = AIService()
 gamification_service = GamificationService()
-auth_service = RegisterService()
+auth_service = AuthService()
 
 # 3. Inicializar la aplicación FastAPI
 app = FastAPI(
@@ -89,3 +90,20 @@ async def registrar_estudiante(payload: RegistroUsuarioInput):
         return resultado
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+#Endpoit logear usuario
+@app.post("/auth/login", response_model=LoginUsuarioResponse, tags=["Autenticación"])
+async def login_estudiante(payload: LoginUsuarioInput):
+    """
+    Endpoint para que los alumnos inicien sesión. Valida las credenciales 
+    y retorna el UUID junto con los datos públicos del estudiante.
+    """
+    try:
+        resultado = await auth_service.logear_estudiante(payload)
+        return resultado
+    except Exception as e:
+        raise HTTPException(
+            status_code=401,
+            detail=str(e)
+        )

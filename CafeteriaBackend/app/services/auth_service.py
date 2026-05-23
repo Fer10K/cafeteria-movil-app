@@ -2,11 +2,45 @@ from fastapi import HTTPException, status
 from supabase import Client
 from app.main import supabase
 from app.schemas.register_schema import RegistroUsuarioResponse, RegistroUsuarioInput
+from app.schemas.login_schema import LoginUsuarioInput, LoginUsuarioResponse
 
 
-class RegisterService:
+class AuthService:
     def __init__(self):
         self.db: Client = supabase
+
+    async def logear_estudiante(self, datos: LoginUsuarioInput) -> LoginUsuarioResponse:
+        try:
+            print("Validar las credenciales contra Supabase Auth")
+            auth_response = self.supabase.auth.sign_in_with_password({
+                "email": datos.correo,
+                "password": datos.password
+            })
+            
+            if not auth_response.user:
+                raise Exception("Credenciales incorrectas o usuario no encontrado.")
+                
+            uuid_confirmado = auth_response.user.id
+
+            print("Buscar el nombre completo en la tabla")
+            resultado_perfil = self.supabase.table("usuarios")\
+                .select("nombre")\
+                .eq("id", uuid_confirmado)\
+                .single()\
+                .execute()
+
+            nombre_usuario = resultado_perfil.data.get("nombre", "Estudiante")
+
+            return LoginUsuarioResponse(
+                usuario_id=uuid_confirmado,
+                nombre_completo=nombre_usuario,
+                correo=datos.correo,
+                mensaje="Inicio de sesión exitoso."
+            )
+
+        except Exception as e:
+            raise Exception(f"Correo o contraseña incorrectos: {e}")
+        
 
     async def registrar_estudiante(self, datos: RegistroUsuarioInput) -> RegistroUsuarioResponse:
         try:
