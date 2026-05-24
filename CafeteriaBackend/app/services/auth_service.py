@@ -12,7 +12,7 @@ class AuthService:
     async def logear_estudiante(self, datos: LoginUsuarioInput) -> LoginUsuarioResponse:
         try:
             print("Validar las credenciales contra Supabase Auth")
-            auth_response = self.supabase.auth.sign_in_with_password({
+            auth_response = self.db.auth.sign_in_with_password({
                 "email": datos.correo,
                 "password": datos.password
             })
@@ -23,7 +23,7 @@ class AuthService:
             uuid_confirmado = auth_response.user.id
 
             print("Buscar el nombre completo en la tabla")
-            resultado_perfil = self.supabase.table("usuarios")\
+            resultado_perfil = self.db.table("usuarios")\
                 .select("nombre")\
                 .eq("id", uuid_confirmado)\
                 .single()\
