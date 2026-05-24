@@ -16,7 +16,7 @@ import com.example.cafeteriaapp.ui.viewmodel.RegistroUiState
 @Composable
 fun RegistroScreen(
     authViewModel: AuthViewModel = viewModel(),
-    onRegistroExitoso: (String) -> Unit // Callback para navegar al menú principal tras registrarse
+    onRegistroExitoso: (String) -> Unit
 ) {
     var nombre by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
