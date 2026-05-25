@@ -1,14 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 
 # =====================================================================
-# 1. ESQUEMAS DE SOPORTE (Basados en OpcionExtraResponse e ItemPedidoRequest)
+# 1. ESQUEMAS DE SOPORTE
 # =====================================================================
 
 class ExtraPedidoRequest(BaseModel):
-    # Usamos id y nombre a secas, tal cual viene en OpcionExtraResponse
-    id: int
-    nombre: str
+    # Mapea 'extra_id' enviado por Android al atributo 'id' interno
+    id: int = Field(validation_alias="extra_id")
+    # Mapea 'nombre_extra' enviado por Android al atributo 'nombre' interno
+    nombre: str = Field(validation_alias="nombre_extra")
     precio_adicional: float
 
 class ItemPedidoRequest(BaseModel):
@@ -20,7 +21,7 @@ class ItemPedidoRequest(BaseModel):
 
 
 # =====================================================================
-# 2. ESQUEMA DE ENTRADA PRINCIPAL (PedidoCreateRequest)
+# 2. ESQUEMA DE ENTRADA PRINCIPAL
 # =====================================================================
 
 class PedidoCreateRequest(BaseModel):
@@ -31,7 +32,7 @@ class PedidoCreateRequest(BaseModel):
 
 
 # =====================================================================
-# 3. ESQUEMA DE SALIDA (PedidoResponse)
+# 3. ESQUEMA DE SALIDA (Lo que Kotlin mapeará en PedidoResponse)
 # =====================================================================
 
 class PedidoResponse(BaseModel):
@@ -40,4 +41,13 @@ class PedidoResponse(BaseModel):
     estado: str
     monto_total: float
     fecha_creacion: str
+    mensaje: str
+
+
+#
+# #MOLDE PARA RESPONDER AL FRONT SIN :ccccc
+
+class PedidoStatusResponse(BaseModel):
+    pedido_id: str
+    estado: str
     mensaje: str

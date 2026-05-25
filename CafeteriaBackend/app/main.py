@@ -1,5 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import supabase
 from app.services.ai_service import AIService
@@ -13,7 +15,7 @@ from app.schemas.gamification_schema import ProcesarCompraRequest, ProcesarCompr
 from app.schemas.register_schema import RegistroUsuarioResponse, RegistroUsuarioInput
 from app.schemas.login_schema import LoginUsuarioInput, LoginUsuarioResponse
 from app.schemas.product_schema import ProductoResponse
-from app.schemas.pedido_schema import PedidoCreateRequest, PedidoResponse
+from app.schemas.pedido_schema import PedidoCreateRequest, PedidoResponse, PedidoStatusResponse
 from typing import List
 
 
@@ -139,18 +141,33 @@ def listar_productos():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/pedidos", response_model=PedidoResponse, tags=["Pedidos"])
+@app.post("/pedidos", response_model=PedidoResponse, status_code=status.HTTP_201_CREATED, tags=["Pedidos"])
 async def crear_pedido(payload: PedidoCreateRequest):
     """
-    Endpoint real que recibe la orden desde el dispositivo Android,
-    valida e impacta las tablas de pedidos en Supabase.
+    Endpoint final conectado a Supabase. Recibe el payload nativo del carrito
+    desde Android, impacta la base de datos y confirma la transacción.
     """
     try:
-        # CAMBIO: Ahora llamamos a la lógica conectada a Supabase
         resultado = await pedido_service.procesar_pedido_real(payload)
         return resultado
     except Exception as e:
         raise HTTPException(
             status_code=400, 
             detail=f"Error al procesar/insertar el pedido: {str(e)}"
+        )
+
+
+@app.get("/pedidos/{pedido_id}/status", response_model=PedidoStatusResponse, tags=["Pedidos"])
+async def obtener_estatus_pedido(pedido_id: str):
+    """
+    Endpoint de Polling para Android. Consulta cada X segundos el estado
+    actual del pedido en Supabase para verificar si el barista ya confirmó el pago.
+    """
+    try:
+        resultado = await pedido_service.verificar_estado_pedido(pedido_id)
+        return resultado
+    except Exception as e:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Error al consultar el estado del pedido: {str(e)}"
         )
