@@ -1,252 +1,199 @@
 package com.example.cafeteriaapp.ui.screen
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.cafeteriaapp.ui.viewmodel.GamificationUiState
+import coil.compose.AsyncImage
+import com.example.cafeteria.data.model.PosicionLeaderboard
+import com.example.cafeteriaapp.ui.components.RecomendacionIaCard // IMPORTANTE: Tu Card basada en Popup
+import com.example.cafeteriaapp.ui.viewmodel.AiUiState
 import com.example.cafeteriaapp.ui.viewmodel.CafeteriaViewModel
-import com.example.cafeteriaapp.ui.viewmodel.MenuViewModel
+import com.example.cafeteriaapp.ui.viewmodel.PerfilUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetalleCompraScreen(
-    menuViewModel: MenuViewModel = viewModel()
+fun PerfilScreen(
+    usuarioId: String,
+    viewModel: CafeteriaViewModel = viewModel()
 ) {
-    val uiState by menuViewModel.gamificationUiState.collectAsState()
-    val usuarioIdConstante = "63f28ccd-9173-40b2-b919-01b784eb148f"
+    // Escuchamos el estado del Perfil (Leaderboard)
+    val pState by viewModel.perfilState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        // Ejecuta la carga a través del flujo limpio del ViewModel
-        menuViewModel.cargarPerfilGamificacion(usuarioIdConstante)
+    // 🤖 1. ESCUCHAMOS EL ESTADO DE LA IA QUE ANTES ESTABA IGNORADO
+    val aiUiState by viewModel.aiState.collectAsState()
+
+    // Estado para controlar si el usuario cierra el banner manualmente
+    var mostrarBanner by remember { mutableStateOf(true) }
+
+    LaunchedEffect(usuarioId) {
+        if (usuarioId.isNotEmpty()) {
+            mostrarBanner = true // Cada que se recargue, reiniciamos el visor del banner
+            viewModel.cargarPerfilGamificacion(usuarioId)
+        }
+    }
+
+    // 2. LIMPIEZA DE MEMORIA: Al salir de la pantalla de gamificación, reseteamos la recomendación
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.limpiarRecomendacion()
+        }
+    }
+
+    // 3. INYECTAMOS EL POPUP DE IA EVALUANDO EL SEALED INTERFACE
+    when (val aiState = aiUiState) {
+        is AiUiState.Success -> {
+            RecomendacionIaCard(
+                mensaje = aiState.sugerencia,
+                visible = mostrarBanner,
+                onCloseClick = { mostrarBanner = false }
+            )
+        }
+        else -> { /* No hace nada si está en Loading, Error o Idle */ }
     }
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Mi Perfil Coffee Pro", fontWeight = FontWeight.Black, fontSize = 20.sp) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+            TopAppBar(
+                title = { Text("Tabla de Posiciones", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            when (val state = uiState) {
-                is GamificationUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
+            when (val state = pState) {
+                is PerfilUiState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-
-                is GamificationUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.message, // 💡 CORREGIDO: Cambiado de .mensaje a .message
-                                color = MaterialTheme.colorScheme.error,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { menuViewModel.cargarPerfilGamificacion(usuarioIdConstante) }) {
-                                Text("Reintentar")
-                            }
-                        }
-                    }
-                }
-
-                is GamificationUiState.Idle, is GamificationUiState.Success -> {
-                    val xpActual = if (state is GamificationUiState.Success) state.data.xp_actual else 0
-                    val nivelActual = if (state is GamificationUiState.Success) state.data.nivel_actual else 1
-
-                    val xpNecesariaSiguienteNivel = nivelActual * 500
-                    val xpNivelAnterior = (nivelActual - 1) * 500
-                    val xpProgresoEnNivelActual = xpActual - xpNivelAnterior
-                    val xpRequeridaSoloParaEsteNivel = xpNecesariaSiguienteNivel - xpNivelAnterior
-
-                    val porcentajeProgreso = if (xpRequeridaSoloParaEsteNivel > 0) {
-                        (xpProgresoEnNivelActual.toFloat() / xpRequeridaSoloParaEsteNivel.toFloat()).coerceIn(0f, 1f)
-                    } else 0f
-
-                    val progresoAnimado by animateFloatAsState(targetValue = porcentajeProgreso)
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // --- TARJETA PRINCIPAL DEL JUGADOR ---
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp)
+                is PerfilUiState.Success -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.primaryContainer,
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                                        )
-                                    )
-                                )
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary)
+                        item {
+                            val miXp = state.xpPropia
+                            val miNivel = state.nivelPropio
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                             ) {
-                                Text(
-                                    text = "LVL\n$nivelActual",
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 20.sp,
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = 22.sp
-                                )
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Star, "Nivel", tint = Color(0xFFFFB300), modifier = Modifier.size(36.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text("Mi Perfil (Nivel $miNivel)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                        Text("$miXp xp totales acumulados", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                }
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(text = "Fernando", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                            Text(text = "Estudiante / Cliente Frecuente", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Progreso de Nivel", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text("$xpActual / $xpNecesariaSiguienteNivel XP", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.EmojiEvents, "Podio", tint = MaterialTheme.colorScheme.secondary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Otros Competidores de la Escuela", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            LinearProgressIndicator(
-                                progress = { progresoAnimado },
-                                modifier = Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(6.dp)),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                            )
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // --- SECCIÓN DE ENCABEZADO DE LOGROS ---
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = Color(0xFFFFB300))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Mis Medallas Desbloqueadas", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val listaLogrosReales = if (state is GamificationUiState.Success) state.data.logros_nuevos else emptyList()
-
-                    if (listaLogrosReales.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().weight(1f).padding(bottom = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Aún no has desbloqueado medallas.\n¡Tus compras e hitos aparecerán aquí! ☕",
-                                color = Color.Gray, fontSize = 14.sp, textAlign = TextAlign.Center, lineHeight = 20.sp
-                            )
-                        }
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth().weight(1f).padding(bottom = 16.dp)
-                        ) {
-                            items(listaLogrosReales) { logro ->
-                                MedallaCard(
-                                    nombre = logro.nombre,
-                                    descripcion = logro.descripcion,
-                                    desbloqueado = true
-                                )
-                            }
+                        itemsIndexed(state.leaderboard) { index, compañero ->
+                            // Pasamos el índice real para pintar el podio dinámico
+                            UsuarioLeaderboardCard(posicion = index + 2, datos = compañero)
                         }
                     }
                 }
-                else -> {}
+                is PerfilUiState.Error -> {
+                    Text(text = state.message, color = Color.Red, modifier = Modifier.align(Alignment.Center))
+                }
             }
         }
     }
 }
-
 @Composable
-fun MedallaCard(nombre: String, descripcion: String, desbloqueado: Boolean) {
+fun UsuarioLeaderboardCard(posicion: Int, datos: PosicionLeaderboard) {
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+
+
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFFB300).copy(alpha = 0.2f))
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MilitaryTech,
-                    contentDescription = null,
-                    tint = Color(0xFFFFB300)
+            // LADO IZQUIERDO: Número de posición + Avatar de Supabase
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "#$posicion",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(32.dp),
+                    color = MaterialTheme.colorScheme.secondary
                 )
+
+                // Imagen de perfil cargada asíncronamente desde la URL
+                AsyncImage(
+                    model = datos.avatar_url,
+                    contentDescription = "Avatar de ${datos.nombre}",
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                    placeholder = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_gallery), // Temporal mientras carga
+                    error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image) // Fallback si se cae la red
+                )
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // CENTRO: Nombre del alumno y su nivel debajo
+                Column {
+                    Text(
+                        text = datos.nombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Nivel ${datos.nivel}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+
+            // LADO DERECHO: Puntos formateados en "XXXxp."
             Text(
-                text = nombre,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = descripcion,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-                lineHeight = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "${datos.xp_total}xp.",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

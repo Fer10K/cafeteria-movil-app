@@ -12,12 +12,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.cafeteriaapp.data.local.SessionManager
 import com.example.cafeteriaapp.data.remote.RetrofitClient
 import com.example.cafeteriaapp.data.repository.CarritoRepository
+import com.example.cafeteriaapp.ui.components.RecomendacionIaCard
 import com.example.cafeteriaapp.ui.viewmodel.MenuViewModel
 import kotlinx.coroutines.delay
 
@@ -32,6 +35,31 @@ fun CartScreen(
 ) {
     val itemsCarrito = CarritoRepository.items
     val total = CarritoRepository.precioTotalCarrito
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val uidDinamico = sessionManager.obtenerSession() ?: ""
+
+    val recomendacionIa by menuViewModel.recomendacionIaState.collectAsState()
+    var mostrarBanner by remember { mutableStateOf(true) }
+
+
+    LaunchedEffect(key1 = CarritoRepository.items.size) {
+        mostrarBanner = true // Si agrega un ítem nuevo, volvemos a habilitar la visibilidad
+        menuViewModel.cargarSugerenciaMaridaje(uidDinamico)
+    }
+
+    // Al destruir o salir de la pantalla del Carrito, limpiamos el flujo del StateFlow
+    DisposableEffect(Unit) {
+        onDispose {
+            menuViewModel.limpiarRecomendacion()
+        }
+    }
+
+    RecomendacionIaCard(
+        mensaje = recomendacionIa,
+        visible = mostrarBanner,
+        onCloseClick = { mostrarBanner = false }
+    )
 
     var mostrarOpcionesPago by remember { mutableStateOf(false) }
     var procesandoNFC by remember { mutableStateOf(false) }
@@ -178,7 +206,7 @@ fun CartScreen(
                     onClick = {
                         mostrarOpcionesPago = false
                         // Lanzamos la petición a la API
-                        menuViewModel.enviarPedidoAlServidor(metodoPago = "NFC") { idGenerado ->
+                        menuViewModel.enviarPedidoAlServidor(usuarioId = uidDinamico, metodoPago = "NFC") { idGenerado ->
                             // Cuando la API responda con éxito, activamos la pantalla de espera NFC local
                             procesandoNFC = true
                         }
@@ -192,7 +220,7 @@ fun CartScreen(
                     onClick = {
                         mostrarOpcionesPago = false
                         // Lanzamos la petición a la API
-                        menuViewModel.enviarPedidoAlServidor(metodoPago = "EFECTIVO") { idGenerado ->
+                        menuViewModel.enviarPedidoAlServidor(usuarioId = uidDinamico, metodoPago = "EFECTIVO") { idGenerado ->
                             // Al responder con éxito, guardamos el ID real de la base de datos y empezamos el bucle de escucha
                             idPedidoCreado = idGenerado
                             procesandoEfectivo = true
@@ -279,7 +307,7 @@ fun CartScreen(
 
                                 try {
                                     val requestGami = com.example.cafeteria.data.model.ProcesarCompraRequest(
-                                        usuario_id = "63f28ccd-9173-40b2-b919-01b784eb148f",
+                                        usuario_id = uidDinamico,
                                         monto_total = total,
                                         cantidad_productos = itemsCarrito.sumOf { it.cantidad },
                                         es_primer_compra_dia = false
@@ -339,7 +367,6 @@ fun CartScreen(
         )
     }
 }
-
 data class PedidoStatusResponse(
     val pedido_id: String,
     val estado: String,

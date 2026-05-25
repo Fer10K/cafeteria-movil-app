@@ -26,7 +26,7 @@ class ItemPedidoRequest(BaseModel):
 
 class PedidoCreateRequest(BaseModel):
     usuario_id: str
-    metodo_pago: str  # "EFECTIVO" o "NFC"
+    metodo_pago: str
     estado: str = "PENDIENTE_PAGO"
     items: List[ItemPedidoRequest]
 

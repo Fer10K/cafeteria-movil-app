@@ -1,9 +1,10 @@
 package com.example.cafeteriaapp.data.remote
 
+import com.example.cafeteria.data.model.PosicionLeaderboard
 import com.example.cafeteria.data.model.ProcesarCompraRequest
 import com.example.cafeteria.data.model.ProcesarCompraResponse
-import com.example.cafeteriaapp.domain.model.RecomendacionRequest
-import com.example.cafeteriaapp.domain.model.RecomendacionResponse
+import com.example.cafeteria.data.model.RecomendacionRequest
+import com.example.cafeteria.data.model.RecomendacionResponse
 import com.example.cafeteriaapp.domain.model.RegistroRequest
 import com.example.cafeteriaapp.domain.model.RegistroResponse
 import com.example.cafeteriaapp.domain.model.LoginRequest
@@ -28,16 +29,16 @@ interface CafeteriaApiService {
     ): retrofit2.Response<ProcesarCompraResponse>
 
     @POST("ai/recomendar")
-    suspend fun obtenerRecomendacionIA(
-        @Body request: RecomendacionRequest
-    ): retrofit2.Response<RecomendacionResponse>
+    suspend fun obtenerRecomendacionIa(
+        @Body payload: RecomendacionRequest
+    ): Response<RecomendacionResponse>
 
     @POST("auth/registro")
     suspend fun registrarUsuario(
         @Body request: RegistroRequest
     ): retrofit2.Response<RegistroResponse>
 
-    @POST( "/auth/login")
+    @POST( "auth/login")
     suspend fun loginUsuario(
         @Body request: LoginRequest
     ): retrofit2.Response<LoginResponse>
@@ -50,7 +51,6 @@ interface CafeteriaApiService {
         @Body pedido: PedidoCreateRequest
     ): PedidoResponse
 
-
     @GET("pedidos/{pedidoId}/status")
     suspend fun verificarEstadoPedido(
         @Path("pedidoId") pedidoId: String
@@ -60,4 +60,15 @@ interface CafeteriaApiService {
     suspend fun obtenerPerfilGamificacion(
         @Path("usuario_id") usuarioId: String
     ): Response<ProcesarCompraResponse>
+
+    @GET("gamificacion/leaderboard/{usuario_id}")
+    suspend fun obtenerLeaderboard(
+        @Path("usuario_id") usuarioId: String
+    ): Response<List<PosicionLeaderboard>>
+
+
+    @GET("pedidos/usuario/{usuario_id}/historial-nombres")
+    suspend fun obtenerPedidosUsuario(
+        @Path("usuario_id") usuarioId: String
+    ): Response<List<String>>
 }

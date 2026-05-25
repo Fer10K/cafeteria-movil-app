@@ -37,7 +37,6 @@ class PedidoService:
 
 
     async def procesar_pedido_real(self, pedido: PedidoCreateRequest) -> PedidoResponse:
-        # 1. Calcular el monto total sumando productos y extras de forma dinámica
         total_calculado = 0.0
         cantidad_productos_total = 0
 
@@ -45,10 +44,9 @@ class PedidoService:
             costo_extras = sum(extra.precio_adicional for extra in item.extras)
             total_calculado += (item.precio_unitario_base + costo_extras) * item.cantidad
 
-        # Cambiar el estado según el método de pago
         estado_final = "PROCESANDO" if pedido.metodo_pago == "NFC" else pedido.estado
 
-        # 2. Insertar en la tabla principal: 'pedidos'
+        # Insertar en la tabla principal: 'pedidos'
         pedido_data = {
             "usuario_id": pedido.usuario_id,
             "metodo_pago": pedido.metodo_pago,
@@ -63,7 +61,7 @@ class PedidoService:
         nuevo_pedido = res_pedido.data[0]
         id_del_pedido_creado = nuevo_pedido["pedido_id"]
 
-        # 3. Insertar los productos en la tabla: 'pedido_items'
+        # Insertar los productos en la tabla: 'pedido_items'
         for item in pedido.items:
             item_data = {
                 "pedido_id": id_del_pedido_creado,
@@ -79,7 +77,7 @@ class PedidoService:
                 
             id_del_item_creado = res_item.data[0]["id"]
 
-            # 4. Insertar los extras vinculados en la tabla: 'pedido_item_extras'
+            # Insertar los extras vinculados en la tabla: 'pedido_item_extras'
             if item.extras:
                 extras_data_list = []
                 for extra in item.extras:

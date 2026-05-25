@@ -4,7 +4,6 @@ import androidx.compose.runtime.mutableStateListOf
 import com.example.cafeteriaapp.domain.model.ProductoModificado
 
 object CarritoRepository {
-    // 🛒 Lista reactiva global donde se guardarán los productos modificados
     val items = mutableStateListOf<ProductoModificado>()
 
     // Añadir al carrito (si el mismo producto con los mismos extras ya existe, suma la cantidad)
@@ -39,7 +38,6 @@ object CarritoRepository {
         items.clear()
     }
 
-    // Calcula el total de TODO el carrito combinando todos los productos seleccionados
     val precioTotalCarrito: Double
         get() = items.sumOf { it.precioTotal }
 }

@@ -15,7 +15,6 @@ data class GrupoOpcionesResponse(
     @SerializedName("nombre") val nombre: String?,
     @SerializedName("min_seleccion") val minSeleccion: Int?,
     @SerializedName("max_seleccion") val maxSeleccion: Int?,
-    // 💡 Una lista de las opciones que acabamos de definir arriba
     @SerializedName("opciones") val opciones: List<OpcionExtraResponse>?
 )
 data class ProductoResponse(
@@ -26,7 +25,7 @@ data class ProductoResponse(
     @SerializedName("descripcion") val descripcion: String?,
     @SerializedName("imagen_url") val imagenUrl: String?,
     @SerializedName("categoria_id") val categoriaId: Int?,
-    @SerializedName("categoria_nombre") val categoriaNombre: String?,
+    @SerializedName("categoria_nombre") val categoriaNombre: String,
 
     @SerializedName("grupos_opciones") val gruposOpciones: List<GrupoOpcionesResponse>?
 )

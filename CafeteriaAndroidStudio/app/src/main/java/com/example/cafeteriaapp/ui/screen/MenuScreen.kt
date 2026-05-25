@@ -18,8 +18,11 @@ import com.example.cafeteriaapp.ui.viewmodel.MenuViewModel
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.cafeteriaapp.data.local.SessionManager
+import com.example.cafeteriaapp.ui.components.RecomendacionIaCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,14 +32,23 @@ fun MenuScreen(
     onIrAGamificacionClick: () -> Unit,
     onIrAAjustesClick: () -> Unit
 ) {
-    val uiState by menuViewModel.uiState.collectAsState()
+    val recomendacionIa by menuViewModel.recomendacionState.collectAsState()
+    var mostrarBanner by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val uidDinamico = sessionManager.obtenerSession() ?: ""
 
+    // Al arrancar la vista, se dispara la petición dinámica
+    LaunchedEffect(Unit) {
+        menuViewModel.cargarRecomendacionInicio(uidDinamico)
+    }
+
+    val uiState by menuViewModel.uiState.collectAsState()
     val categoriesVisibles = listOf("Todo", "Café", "Fríos", "Repostería")
     var categoriaSeleccionadaIndex by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
-            // 💡 CORRECCIÓN 1: Cambiamos .fillMaxSize() por .fillMaxWidth() para que solo ocupe su alto natural
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -61,7 +73,7 @@ fun MenuScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, bottom = 8.dp), // Ajustamos espaciado inferior
+                        .padding(start = 16.dp, bottom = 8.dp),
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                 ) {
@@ -72,7 +84,6 @@ fun MenuScreen(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // BOTÓN ACCESO A GAMIFICACIÓN
                         IconButton(onClick = onIrAGamificacionClick) {
                             Icon(
                                 imageVector = Icons.Default.Star,
@@ -83,7 +94,6 @@ fun MenuScreen(
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // BOTÓN REUBICADO DEL CARRITO DE COMPRAS
                         IconButton(onClick = onIrAlCarritoClick) {
                             Icon(
                                 imageVector = Icons.Default.ShoppingCart,
@@ -92,10 +102,9 @@ fun MenuScreen(
                             )
                         }
 
-                        //BOTON DE AJUSTES
                         IconButton(onClick = onIrAAjustesClick) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Settings,
+                                imageVector = Icons.Default.Settings,
                                 contentDescription = "Configuración",
                                 tint = Color.Gray
                             )
@@ -104,124 +113,127 @@ fun MenuScreen(
                 }
             }
         }
-    ) { paddingValues -> // 💡 CORRECCIÓN 2: Usamos estos márgenes obligatorios
-        Column(
+    ) { paddingValues ->
+
+        // 💡 SOLUCIÓN: Metemos un Box raíz aquí para poder superponer la tarjeta mágica de la IA
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues) // Evita que el contenido colisione o se meta debajo de la topBar
+                .padding(paddingValues)
         ) {
-            // Menú scrolleable horizontal de categorías
-            ScrollableTabRow(
-                selectedTabIndex = categoriaSeleccionadaIndex,
-                edgePadding = 16.dp,
-                modifier = Modifier.fillMaxWidth()
+
+            // 1. TU CONTENIDO PRINCIPAL DE LA APP
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
-                categoriesVisibles.forEachIndexed { index, titulo ->
-                    Tab(
-                        selected = categoriaSeleccionadaIndex == index,
-                        onClick = { categoriaSeleccionadaIndex = index },
-                        text = { Text(titulo, style = MaterialTheme.typography.bodyLarge) }
-                    )
-                }
-            }
-
-            // Manejo de Estados de la API
-            when (val state = uiState) {
-                is MenuUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                ScrollableTabRow(
+                    selectedTabIndex = categoriaSeleccionadaIndex,
+                    edgePadding = 16.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    categoriesVisibles.forEachIndexed { index, titulo ->
+                        Tab(
+                            selected = categoriaSeleccionadaIndex == index,
+                            onClick = { categoriaSeleccionadaIndex = index },
+                            text = { Text(titulo, style = MaterialTheme.typography.bodyLarge) }
+                        )
                     }
                 }
 
-                is MenuUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(state.mensaje, color = MaterialTheme.colorScheme.error)
+                when (val state = uiState) {
+                    is MenuUiState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
 
-                is MenuUiState.Success -> {
-                    val categoriaActual = categoriesVisibles[categoriaSeleccionadaIndex]
+                    is MenuUiState.Error -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(state.mensaje, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
 
-                    if (categoriaActual == "Todo") {
-                        LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
-                            state.productosPorCategoria.forEach { (nombreCategoria, productos) ->
-                                item {
-                                    println("🎨 [COMPOSE DEBUG] Todo -> Dibujando fila horizontal para la categoría: '$nombreCategoria' con ${productos.size} productos.")
+                    is MenuUiState.Success -> {
+                        val categoriaActual = categoriesVisibles[categoriaSeleccionadaIndex]
 
-                                    Text(
-                                        text = nombreCategoria,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        modifier = Modifier.padding(
-                                            start = 8.dp,
-                                            top = 16.dp,
-                                            bottom = 8.dp
+                        if (categoriaActual == "Todo") {
+                            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
+                                state.productosPorCategoria.forEach { (nombreCategoria, productos) ->
+                                    item {
+                                        Text(
+                                            text = nombreCategoria,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            modifier = Modifier.padding(start = 8.dp, top = 16.dp, bottom = 8.dp)
                                         )
-                                    )
-                                    LazyRow(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        items(productos) { producto ->
-                                            ProductoCard(
-                                                producto = producto,
-                                                onPersonalizarClick = { prod ->
-                                                    menuViewModel.abrirPersonalizacion(prod)
-                                                },
-                                                modifier = Modifier.width(220.dp)
-                                            )
+                                        LazyRow(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            items(productos) { producto ->
+                                                ProductoCard(
+                                                    producto = producto,
+                                                    onPersonalizarClick = { prod ->
+                                                        menuViewModel.abrirPersonalizacion(prod)
+                                                    },
+                                                    modifier = Modifier.width(220.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    } else {
-                        val productosFiltrados = state.todosLosProductos.filter {
-                            it.categoriaNombre?.equals(categoriaActual, ignoreCase = true) == true
-                        }
-
-                        println("🎨 [COMPOSE DEBUG] Pestaña específica -> Encontrados ${productosFiltrados.size} productos que coinciden con '$categoriaActual'")
-
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize()
-                                .padding(horizontal = 8.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            item {
-                                Text(
-                                    text = "Especialidades en $categoriaActual",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier.padding(start = 8.dp, bottom = 12.dp)
-                                )
+                        } else {
+                            val productosFiltrados = state.todosLosProductos.filter {
+                                it.categoriaNombre?.equals(categoriaActual, ignoreCase = true) == true
                             }
-                            items(productosFiltrados) { producto ->
-                                ProductoCard(
-                                    producto = producto,
-                                    onPersonalizarClick = { prod ->
-                                        menuViewModel.abrirPersonalizacion(prod)
-                                    }
-                                )
+
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                item {
+                                    Text(
+                                        text = "Especialidades en $categoriaActual",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier.padding(start = 8.dp, bottom = 12.dp)
+                                    )
+                                }
+                                items(productosFiltrados) { producto ->
+                                    ProductoCard(
+                                        producto = producto,
+                                        onPersonalizarClick = { prod ->
+                                            menuViewModel.abrirPersonalizacion(prod)
+                                        }
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    val productoAPersonalizar = menuViewModel.productoAEditar
-
-                    productoAPersonalizar?.let { producto ->
-                        PersonalizacionSheet(
-                            producto = producto,
-                            extrasSeleccionados = menuViewModel.extrasSeleccionadosTemporalmente,
-                            cantidad = menuViewModel.cantidadTemporal,
-                            onOpcionAlternada = { opcion, maxSeleccion, grupoId, opcionesGrupo ->
-                                menuViewModel.alternarOpcion(opcion, maxSeleccion, grupoId, opcionesGrupo)
-                            },
-                            onIncrementar = { menuViewModel.incrementarCantidad() },
-                            onDecrementar = { menuViewModel.decrementarCantidad() },
-                            onConfirmar = { menuViewModel.agregarAlCarritoConfirmado() },
-                            onDismiss = { menuViewModel.cerrarPersonalizacion() }
-                        )
+                        val productoAPersonalizar = menuViewModel.productoAEditar
+                        productoAPersonalizar?.let { producto ->
+                            PersonalizacionSheet(
+                                producto = producto,
+                                extrasSeleccionados = menuViewModel.extrasSeleccionadosTemporalmente,
+                                cantidad = menuViewModel.cantidadTemporal,
+                                onOpcionAlternada = { opcion, maxSeleccion, grupoId, opcionesGrupo ->
+                                    menuViewModel.alternarOpcion(opcion, maxSeleccion, grupoId, opcionesGrupo)
+                                },
+                                onIncrementar = { menuViewModel.incrementarCantidad() },
+                                onDecrementar = { menuViewModel.decrementarCantidad() },
+                                onConfirmar = { menuViewModel.agregarAlCarritoConfirmado() },
+                                onDismiss = { menuViewModel.cerrarPersonalizacion() }
+                            )
+                        }
                     }
                 }
             }
+
+            // 2. 🔥 LA RECOMENDACIÓN FLOTANDO EXACTAMENTE POR ENCIMA DEL CONTENIDO
+            RecomendacionIaCard(
+                mensaje = recomendacionIa,
+                visible = mostrarBanner,
+                onCloseClick = { mostrarBanner = false }
+            )
         }
     }
 }

@@ -9,7 +9,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.cafeteriaapp.ui.MainApp
 import com.example.cafeteriaapp.ui.screen.LoginScreen
-import com.example.cafeteriaapp.ui.screen.RecomendacionScreen
 import com.example.cafeteriaapp.ui.screen.RegistroScreen
 import com.example.cafeteriaapp.ui.theme.CafeteriaAppTheme
 

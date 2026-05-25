@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import traceback
 
 from app.config import supabase
 from app.services.ai_service import AIService
@@ -10,8 +11,8 @@ from app.services.auth_service import AuthService
 from app.services.product_service import ProductoService
 from app.services.pedido_service import PedidoService
 
-from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse
-from app.schemas.gamification_schema import ProcesarCompraRequest, ProcesarCompraResponse
+from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse, HistorialCompraSchema
+from app.schemas.gamification_schema import ProcesarCompraRequest, ProcesarCompraResponse, PosicionLeaderboard
 from app.schemas.register_schema import RegistroUsuarioResponse, RegistroUsuarioInput
 from app.schemas.login_schema import LoginUsuarioInput, LoginUsuarioResponse
 from app.schemas.product_schema import ProductoResponse
@@ -34,15 +35,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # 💡 Esto permite que tu celular físico pueda leer el JSON completo
-    allow_credentials=True,
-    allow_methods=["*"], # Permite GET, POST, etc.
-    allow_headers=["*"],
-)
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        # Esto imprimirá el error con lujo de detalle en la consola de Docker
+        print("💥 ERROR CRÍTICO EN EL BACKEND:")
+        traceback.print_exc()
+        
+        # Y esto te mandará el verdadero error a Android para que lo veas en el Logcat
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error interno: {str(e)}", "traceback": traceback.format_exc()}
+        )
 
-# 4. Configurar CORS (Crucial para permitir conexiones externas)
+#  Configurar CORS (Crucial para permitir conexiones externas)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -67,19 +75,14 @@ async def generar_sugerencia_menu(payload: RecomendacionRequest):
     para devolver una recomendación personalizada generada por Gemini 1.5 Flash.
     """
     try:
-        historial_dict = [item.model_dump() for item in payload.historial]
-        productos_dict = [item.model_dump() for item in payload.productos_disponibles]
+        payload_dict = payload.model_dump()
         
-        resultado_ia = await ai_service.obtener_recomendacion_menu(
-            historial_usuario=historial_dict,
-            productos_disponibles=productos_dict
-        )
-    
+        resultado_ia = await ai_service.obtener_recomendacion_contextual(payload_dict)
+        
         return RecomendacionResponse(
             usuario_id=payload.usuario_id,
             recomendacion=resultado_ia
         )
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno en el módulo de IA: {str(e)}")
 
@@ -177,44 +180,71 @@ async def obtener_estatus_pedido(pedido_id: str):
 async def obtener_perfil_gamificacion_estudiante(usuario_id: str):
     """
     Endpoint autónomo que consulta Supabase para extraer los puntos acumulados,
-    el nivel y la lista completa de logros desbloqueados de un estudiante específico.
+    el nivel de un estudiante específico.
     """
     try:
-        # 1. Consultar la tabla perfiles_gamificacion para obtener nivel y xp_total
-        res_perfil = supabase.table("perfiles_gamificacion").select("xp_total", "nivel").eq("usuario_id", usuario_id).maybe_single().execute()
-        
-        xp_total = 0
-        nivel = 1
-        if res_perfil and res_perfil.data:
-            xp_total = res_perfil.data.get("xp_total", 0)
-            nivel = res_perfil.data.get("nivel", 1)
-        
-        # 2. Consultar la relación de logros usando un INNER JOIN implícito de Supabase
-        # Esto cruza la tabla relacional 'usuario_logros' con la tabla maestra 'logros'
-        res_logros = supabase.table("usuario_logros").select("logros(id, nombre, descripcion, icono_url)").eq("usuario_id", usuario_id).execute()
-        
-        logros_list = []
-        if res_logros and res_logros.data:
-            for item in res_logros.data:
-                # Extraemos de manera segura el diccionario anidado que genera la relación
-                logro_maestro = item.get("logros")
-                if logro_maestro:
-                    logros_list.append({
-                        "id": logro_maestro.get("id"),
-                        "nombre": logro_maestro.get("nombre"),
-                        "descripcion": logro_maestro.get("descripcion"),
-                        "icono_url": logro_maestro.get("icono_url")
-                    })
-        
-        # Retornamos estructurado exactamente bajo el molde de ProcesarCompraResponse
-        return {
-            "usuario_id": usuario_id,
-            "xp_ganada": 0, # Al ser una consulta GET pura, no se añade nueva XP
-            "xp_actual": xp_total,
-            "nivel_actual": nivel,
-            "subio_de_nivel": False,
-            "logros_nuevos": logros_list
-        }
+        res = await gamification_service.obtener_perfile_individual(usuario_id)
+        return res
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al leer Supabase: {str(e)}")
+    
+
+
+@app.get("/gamificacion/leaderboard/{usuario_id}", response_model=list[PosicionLeaderboard])
+async def obtener_leaderboard(usuario_id: str):
+    """
+    Endpoint autónomo que consulta Supabase para extraer los puntos acumulados,
+    el nivel y de todos los usuarios exepto el especifico
+    """
+    try:
+        res = await gamification_service.obtener_perfiles_general(usuario_id)
+        
+        return res
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error interno: {str(e)}", "traceback": traceback.format_exc()}
+        )
+
+
+@app.get("/pedidos/usuario/{usuario_id}/historial-nombres", response_model=List[str], tags=["Pedidos"])
+async def obtener_pedidos_usuario(usuario_id: str):
+    """
+    Obtiene los IDs de la tabla 'pedidos' filtrando por usuario_id, 
+    busca los nombres en 'pedido_items' y regresa una lista plana de strings.
+    """
+    try:
+        # 1. Obtener los pedido_id del usuario desde la tabla 'pedidos'
+        res_pedidos = supabase.table("pedidos") \
+            .select("pedido_id") \
+            .eq("usuario_id", usuario_id) \
+            .execute()
+        
+        datos_pedidos = res_pedidos.data if res_pedidos.data else []
+        if not datos_pedidos:
+            return []
+            
+        # Extraemos todos los UUIDs de los pedidos en una lista nativa de Python
+        lista_pedido_ids = [p["pedido_id"] for p in datos_pedidos]
+        
+        # 2. Consultar 'pedido_items' para traer los nombres vinculados a esos IDs
+        res_items = supabase.table("pedido_items") \
+            .select("nombre_producto") \
+            .in_("pedido_id", lista_pedido_ids) \
+            .execute()
+            
+        datos_items = res_items.data if res_items.data else []
+        
+        # 3. Filtrar y limpiar para regresar únicamente la lista de nombres (máximo 10)
+        nombres_productos = [item["nombre_producto"] for item in datos_items if item.get("nombre_producto")]
+        
+        # Retornamos los últimos 10 de forma simplificada
+        return nombres_productos[:10]
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al procesar el historial relacional de pedidos: {str(e)}"
+        )

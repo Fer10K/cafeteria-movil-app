@@ -26,3 +26,15 @@ class ProcesarCompraResponse(BaseModel):
         default=[], 
         description="Lista de medallas que el usuario desbloqueó estrictamente con esta compra"
     )
+
+    #Esquema obtener PErfiles
+
+class PosicionLeaderboard(BaseModel):
+    usuario_id: str
+    nombre: str
+    xp_total: int
+    nivel: int
+    avatar_url: str
+
+    class Config:
+        from_attributes = True

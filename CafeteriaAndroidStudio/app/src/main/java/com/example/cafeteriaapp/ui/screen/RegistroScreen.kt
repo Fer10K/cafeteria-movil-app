@@ -106,8 +106,10 @@ fun RegistroScreen(
                         Text("ID generado: ${state.usuarioId}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                LaunchedEffect(state) {
-                    onRegistroExitoso(state.usuarioId)
+                LaunchedEffect(state.usuarioId) {
+                    if (!state.usuarioId.isNullOrEmpty()) {
+                        onRegistroExitoso(state.usuarioId)
+                    }
                 }
             }
             is RegistroUiState.Error -> {

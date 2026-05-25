@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from supabase import Client
 from app.main import supabase
-from app.schemas.gamification_schema import ProcesarCompraRequest, LogroDesbloqueadoSchema
+from app.schemas.gamification_schema import ProcesarCompraRequest, LogroDesbloqueadoSchema, ProcesarCompraResponse, PosicionLeaderboard
 
 class GamificationService:
     def __init__(self):
@@ -94,3 +94,62 @@ class GamificationService:
             "subio_de_nivel": subio_de_nivel,
             "logros_nuevos": logros_nuevos
         }
+
+    async def obtener_perfile_individual(self, usuario_id: str) -> dict:
+        res_perfil = supabase.table("perfiles_gamificacion").select("xp_total", "nivel").eq("usuario_id", usuario_id).maybe_single().execute()
+        
+        xp_total = 0
+        nivel = 1
+        if res_perfil and res_perfil.data:
+            xp_total = res_perfil.data.get("xp_total", 0)
+            nivel = res_perfil.data.get("nivel", 1)
+        
+        # Consulta de logros vinculados
+        res_logros = supabase.table("usuario_logros").select("logros(id, nombre, descripcion, icono_url)").eq("usuario_id", usuario_id).execute()
+        
+        logros_list = []
+        if res_logros and res_logros.data:
+            for item in res_logros.data:
+                logro_maestro = item.get("logros")
+                if logro_maestro:
+                    logros_list.append({
+                        "id": logro_maestro.get("id"),
+                        "nombre": logro_maestro.get("nombre"),
+                        "descripcion": logro_maestro.get("descripcion"),
+                        "icono_url": logro_maestro.get("icono_url")
+                    })
+        
+        return {
+            "usuario_id": usuario_id,
+            "xp_ganada": 0,
+            "xp_actual": xp_total,
+            "nivel_actual": nivel,
+            "subio_de_nivel": False,
+            "logros_nuevos": logros_list
+        }
+
+    async def obtener_perfiles_general(self, usuario_id: str) -> list:
+        respuesta = supabase.table("perfiles_gamificacion") \
+            .select("usuario_id, xp_total, nivel, avatar_url, usuarios(nombre)") \
+            .order("xp_total", desc=True) \
+            .execute()
+            
+        leaderboard_completo = respuesta.data if respuesta.data else []
+        
+        lista_filtrada = []
+        for perfil in leaderboard_completo:
+            if perfil["usuario_id"] != usuario_id:
+                # Extraemos de forma segura el nombre relacional
+                nombre_usuario = perfil.get("usuarios", {}).get("nombre", "Alumno Anónimo") if perfil.get("usuarios") else "Alumno Anónimo"
+            
+                # Construimos un diccionario plano. FastAPI lo mapeará automáticamente a PosicionLeaderboard
+                lista_filtrada.append({
+                    "usuario_id": perfil["usuario_id"],
+                    "nombre": nombre_usuario,
+                    "xp_total": perfil.get("xp_total", 0),
+                    "nivel": perfil.get("nivel", 1),                        
+                    "avatar_url": perfil.get("avatar_url") or "https://vuestrasubase.supabase.co/storage/v1/object/public/avatares/default.png"
+                })
+                
+        #  CORRECCIÓN: El return alineado fuera del bucle 'for' para regresar la lista completa
+        return lista_filtrada

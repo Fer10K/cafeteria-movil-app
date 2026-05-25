@@ -6,7 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.cafeteriaapp.data.local.SessionManager
+import com.example.cafeteria.data.model.ProcesarCompraResponse
+import com.example.cafeteria.data.model.HistorialCompraSchema
+import com.example.cafeteria.data.model.ProductoDisponibleSchema
+import com.example.cafeteria.data.model.RecomendacionRequest
 import com.example.cafeteriaapp.data.remote.RetrofitClient
 import com.example.cafeteriaapp.data.repository.CarritoRepository
 import com.example.cafeteriaapp.domain.model.OpcionExtraResponse
@@ -15,7 +18,6 @@ import com.example.cafeteriaapp.domain.model.ProductoResponse
 import com.example.cafeteriaapp.domain.model.toNetworkPayload
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 sealed interface PedidoNetworkState {
@@ -28,10 +30,15 @@ sealed interface MenuUiState {
     object Loading : MenuUiState
     data class Success(
         val todosLosProductos: List<ProductoResponse>,
-        // Agrupados por nombre de categoría para la sección "Todo"
         val productosPorCategoria: Map<String, List<ProductoResponse>>
     ) : MenuUiState
     data class Error(val mensaje: String) : MenuUiState
+}
+
+sealed interface GamificacionUiState {
+    object Loading : GamificacionUiState
+    data class Success(val data: ProcesarCompraResponse) : GamificacionUiState
+    data class Error(val message: String) : GamificacionUiState
 }
 
 class MenuViewModel: ViewModel() {
@@ -49,10 +56,129 @@ class MenuViewModel: ViewModel() {
 
     // Lista mutable reactiva para los extras que el usuario selecciona EN TIEMPO REAL
     val extrasSeleccionadosTemporalmente = mutableStateListOf<OpcionExtraResponse>()
+    //Para la ia
+    private val _recomendacionState = MutableStateFlow("")
+    val recomendacionState: StateFlow<String> = _recomendacionState
 
     // Cantidad de unidades del producto actual
     var cantidadTemporal by mutableStateOf(1)
         private set
+
+    private val _recomendacionIaState = MutableStateFlow("")
+    val recomendacionIaState: StateFlow<String> = _recomendacionIaState
+
+    private val _isCargandoIa = MutableStateFlow(false)
+    val isCargandoIa: StateFlow<Boolean> = _isCargandoIa
+    fun cargarSugerenciaMaridaje(usuarioId: String) {
+        // Obtenemos de forma directa la lista de la cesta actual desde tu repositorio
+        val itemsActuales: List<ProductoModificado> = CarritoRepository.items
+
+        // Si la bolsa está vacía, evitamos consumir la API de Gemini y limpiamos el estado
+        if (itemsActuales.isEmpty()) {
+            _recomendacionIaState.value = ""
+            return
+        }
+
+        viewModelScope.launch {
+            _isCargandoIa.value = true
+            try {
+                // 1. MAPEAR CESTA ACTUAL: Extraemos solo el nombre y categoría de la base del producto modificado
+                val productosEnCesta = itemsActuales.map { itemModificado ->
+                    HistorialCompraSchema(
+                        productoNombre = itemModificado.productoBase.nombre
+                    )
+                }
+
+                // 2. MENÚ DINÁMICO DESDE EL BACK: Obtenemos el catálogo real usando tu ProductoResponse
+                val resProductos = RetrofitClient.apiService.obtenerProductos()
+                val menuDisponible = if (resProductos.isSuccessful && resProductos.body() != null) {
+                    resProductos.body()!!.map { prod ->
+                        ProductoDisponibleSchema(
+                            id = prod.id.toString(),
+                            nombre = prod.nombre,
+                            precio = prod.precio,
+                            categoria = prod.categoriaNombre
+                        )
+                    }
+                } else {
+                    emptyList()
+                }
+
+                // 3. DISPARAR PETICIÓN DE IA: Si hay menú disponible, enviamos todo unificado
+                if (menuDisponible.isNotEmpty()) {
+                    val payload = RecomendacionRequest(
+                        usuarioId = usuarioId,
+                        tipoContexto = "carrito",
+                        historial = productosEnCesta,
+                        productosDisponibles = menuDisponible
+                    )
+
+                    val response = RetrofitClient.apiService.obtenerRecomendacionIa(payload)
+                    if (response.isSuccessful && response.body() != null) {
+                        _recomendacionIaState.value = response.body()!!.recomendacion
+                    } else {
+                        _recomendacionIaState.value = ""
+                    }
+                }
+            } catch (e: Exception) {
+                _recomendacionIaState.value = "" // Manejo silencioso ante pérdidas de conexión
+            } finally {
+                _isCargandoIa.value = false
+            }
+        }
+    }
+    fun limpiarRecomendacion() {
+        _recomendacionIaState.value = ""
+    }
+
+    fun cargarRecomendacionInicio(usuarioId: String) {
+        viewModelScope.launch {
+            try {
+                // 1. Obtención en tiempo real del menú desde tu API
+                val resProductos = RetrofitClient.apiService.obtenerProductos()
+                val menuDelDia = if (resProductos.isSuccessful && resProductos.body() != null) {
+                    resProductos.body()!!.map { prod ->
+                        ProductoDisponibleSchema(
+                            id = prod.id.toString(),
+                            nombre = prod.nombre,
+                            precio = prod.precio,
+                            categoria = prod.categoriaNombre
+                        )
+                    }
+                } else emptyList()
+
+                // 2. Obtención en tiempo real de los últimos pedidos del alumno
+                val resHistorialStrings = RetrofitClient.apiService.obtenerPedidosUsuario(usuarioId)
+                val historialEstudiante = if (resHistorialStrings.isSuccessful && resHistorialStrings.body() != null) {
+                    // Convertimos la lista de strings individuales al esquema que espera la IA
+                    resHistorialStrings.body()!!.map { nombrePlano ->
+                        HistorialCompraSchema(
+                            productoNombre = nombrePlano
+                        )
+                    }
+                } else emptyList()
+
+                // 3. Disparamos la petición unificada al backend si el menú cargó con éxito
+                if (menuDelDia.isNotEmpty()) {
+                    val payload = RecomendacionRequest(
+                        usuarioId = usuarioId,
+                        tipoContexto = "inicio",
+                        historial = historialEstudiante,
+                        productosDisponibles = menuDelDia
+                    )
+
+                    val response = RetrofitClient.apiService.obtenerRecomendacionIa(payload)
+                    if (response.isSuccessful && response.body() != null) {
+                        _recomendacionState.value = response.body()!!.recomendacion
+                    }
+                }
+            } catch (e: Exception) {
+                _recomendacionState.value = "${e}"
+            }
+        }
+    }
+
+
     fun cargarCatalogo() {
         viewModelScope.launch {
             _uiState.value = MenuUiState.Loading
@@ -151,7 +277,7 @@ class MenuViewModel: ViewModel() {
         cerrarPersonalizacion()
     }
 
-    fun enviarPedidoAlServidor(metodoPago: String, onIdGenerado: (String) -> Unit) {
+    fun enviarPedidoAlServidor(usuarioId: String, metodoPago: String, onIdGenerado: (String) -> Unit) {
         val itemsCarrito = CarritoRepository.items
         if (itemsCarrito.isEmpty()) return
 
@@ -162,7 +288,7 @@ class MenuViewModel: ViewModel() {
             try {
 
                 val payload = itemsCarrito.toNetworkPayload(
-                    usuarioId = "63f28ccd-9173-40b2-b919-01b784eb148f",
+                    usuarioId = usuarioId,
                     metodoPago = metodoPago
                 )
                 println("🚀 [FRONTEND] ENVIANDO PEDIDO A FASTAPI VIA NFC")
@@ -202,25 +328,5 @@ class MenuViewModel: ViewModel() {
     fun resetPedidoState() {
         pedidoNetworkState = PedidoNetworkState.Idle
     }
-
-    private val _gamificationUiState = MutableStateFlow<GamificationUiState>(GamificationUiState.Idle)
-    val gamificationUiState: StateFlow<GamificationUiState> = _gamificationUiState.asStateFlow()
-
-    fun cargarPerfilGamificacion(usuarioId: String) {
-        viewModelScope.launch {
-            // 🚀 CORRECCIÓN: Asignamos al nuevo estado de gamificación, no al del menú
-            _gamificationUiState.value = GamificationUiState.Loading
-            try {
-                val response = RetrofitClient.apiService.obtenerPerfilGamificacion(usuarioId)
-
-                if (response.isSuccessful && response.body() != null) {
-                    _gamificationUiState.value = GamificationUiState.Success(data = response.body()!!)
-                } else {
-                    _gamificationUiState.value = GamificationUiState.Error("No se pudieron obtener tus estadísticas.")
-                }
-            } catch (e: Exception) {
-                _gamificationUiState.value = GamificationUiState.Error(e.localizedMessage ?: "Error de red")
-            }
-        }
-    }
 }
+

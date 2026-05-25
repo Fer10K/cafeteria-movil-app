@@ -9,12 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-sealed interface RegistroUiState {
-    object Idle : RegistroUiState
-    object Loading : RegistroUiState
-    data class Success(val usuarioId: String, val mensaje: String) : RegistroUiState
-    data class Error(val error: String) : RegistroUiState
-}
 
 sealed interface LoginUiState {
     object Idle : LoginUiState
@@ -22,10 +16,16 @@ sealed interface LoginUiState {
     data class Success(val usuarioId: String, val nombre: String) : LoginUiState
     data class Error(val error: String) : LoginUiState
 }
+sealed interface RegistroUiState {
+    object Idle : RegistroUiState
+    object Loading : RegistroUiState
+    data class Success(val usuarioId: String, val mensaje: String) : RegistroUiState
+    data class Error(val error: String) : RegistroUiState
+}
 
 class AuthViewModel : ViewModel() {
 
-    private val _registroState = MutableStateFlow<RegistroUiState>(RegistroUiState.Idle)
+    val _registroState = MutableStateFlow<RegistroUiState>(RegistroUiState.Idle)
     val registroState: StateFlow<RegistroUiState> = _registroState
 
     fun registrarEstudiante(nombre: String, correo: String, password: String) {

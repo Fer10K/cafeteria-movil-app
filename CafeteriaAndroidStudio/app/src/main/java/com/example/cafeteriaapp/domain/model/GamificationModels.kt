@@ -22,5 +22,13 @@ data class ProcesarCompraResponse(
     val xp_actual: Int,
     val nivel_actual: Int,
     val subio_de_nivel: Boolean,
-    val logros_nuevos: List<LogroDesbloqueado>
+    val logros_nuevos: List<LogroDesbloqueado> = emptyList()
+)
+
+data class PosicionLeaderboard(
+    val usuario_id: String,
+    val xp_total: Int,
+    val nivel: Int,
+    val nombre: String,
+    val avatar_url: String
 )

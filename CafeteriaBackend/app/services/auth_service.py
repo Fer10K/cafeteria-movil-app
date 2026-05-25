@@ -45,9 +45,12 @@ class AuthService:
     async def registrar_estudiante(self, datos: RegistroUsuarioInput) -> RegistroUsuarioResponse:
         try:
             print("Crear el usuario en Supabase Auth")
-            auth_response = self.db.auth.sign_up(
-                {"email": datos.correo, "password": datos.password}
-            )
+            auth_response = supabase.auth.admin.create_user({
+            "email": datos.correo,
+            "password": datos.password,
+            "email_confirm": True,
+            "user_metadata": {"nombre": datos.nombre_completo}
+        })
 
             print("Validamos que se haya generado el usuario en Auth")
             if not auth_response.user:
@@ -57,20 +60,23 @@ class AuthService:
                 )
 
             uuid_oficial = auth_response.user.id
+            print(f"✅ Usuario creado en Auth con UUID: {uuid_oficial}")
+            print("Insertar los datos del alumno en tu tabla de usuarios públicos")
 
             print(
                 "Insertar los datos del alumno en tu tabla de usuarios públicos usando el UUID oficial"
             )
-            supabase.table("usuarios").upsert(
-                {
-                    "id": uuid_oficial,
-                    "nombre": datos.nombre_completo,
-                    "correo": datos.correo,
-                }
-            ).execute()
+
+            # Ahora la inserción manual no fallará jamás por la clave foránea
+            supabase.table("usuarios").upsert({
+            "id": uuid_oficial,
+            "nombre": datos.nombre_completo,
+            "correo": datos.correo
+            }).execute()
+            
 
             print("Inicializarsu perfil de gamificación")
-            supabase.table("perfiles_gamificacion").insert(
+            supabase.table("perfiles_gamificacion").upsert(
                 {"usuario_id": uuid_oficial, "xp_total": 0, "nivel": 1}
             ).execute()
 

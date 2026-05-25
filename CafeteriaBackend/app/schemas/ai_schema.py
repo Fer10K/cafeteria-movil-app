@@ -1,35 +1,27 @@
 from pydantic import BaseModel, Field
-from typing import List
-
+from typing import List, Optional
 
 class HistorialCompraSchema(BaseModel):
-    producto_nombre: str = Field(..., example="Café Americano", description="Nombre del producto comprado")
-    categoria: str = Field(..., example="Bebidas Calientes", description="Categoría del producto")
-    fecha: str = Field(..., example="2026-05-20", description="Fecha de la compra")
-
+    producto_nombre: str = Field(..., example="Café Americano")
 
 class ProductoDisponibleSchema(BaseModel):
-    id: str = Field(..., example="prod_123", description="ID único del producto en Supabase")
-    nombre: str = Field(..., example="Muffin de Arándanos", description="Nombre comercial")
-    precio: float = Field(..., example=35.00, description="Precio de venta al público")
-    stock: int = Field(..., example=15, description="Cantidad disponible en el inventario")
-    categoria: str = Field(..., example="Repostería", description="Categoría para armar los combos")
+    id: str
+    nombre: str
+    precio: float
+    categoria: str
 
-
-#Esquema para la ia
+# 🔥 NUEVO: Esquema unificado para soportar los 3 flujos sin choques
 class RecomendacionRequest(BaseModel):
-    usuario_id: str = Field(..., example="usr_987", description="UUID del estudiante en la base de datos")
-    historial: List[HistorialCompraSchema] = Field(
-        default=[], 
-        description="Lista de las últimas compras del alumno extraídas de Supabase"
-    )
-    productos_disponibles: List[ProductoDisponibleSchema] = Field(
-        ..., 
-        description="Lista del inventario actual de la cafetería con stock disponible"
-    )
+    usuario_id: str
+    tipo_contexto: str = Field(..., example="inicio", description="Valores válidos: 'inicio', 'carrito', 'gamificacion'")
+    historial: List[HistorialCompraSchema] = Field(default=[])
+    productos_disponibles: List[ProductoDisponibleSchema] = Field(default=[])
+    
+    # Campos adicionales opcionales para la pantalla de Gamificación
+    puntos_usuario_actual: Optional[int] = Field(default=None, description="XP acumulada por el alumno")
+    puntos_siguiente_usuario: Optional[int] = Field(default=None, description="XP del rival a vencer en el leaderboard")
+    nombre_siguiente_usuario: Optional[str] = Field(default=None, description="Nombre del alumno que va arriba")
 
-
-#Esquema de respouesta
 class RecomendacionResponse(BaseModel):
     usuario_id: str
-    recomendacion: str = Field(..., description="Texto corto sugerido por Gemini listo para mostrar en la interfaz")
+    recomendacion: str
