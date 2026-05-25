@@ -16,9 +16,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.cafeteriaapp.data.remote.RetrofitClient
 import com.example.cafeteriaapp.data.repository.CarritoRepository
 import com.example.cafeteriaapp.ui.viewmodel.MenuViewModel
 import kotlinx.coroutines.delay
+
+
+// Agrégalo al final de tu archivo CartScreen.kt (Fuera del Composable)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -254,20 +258,37 @@ fun CartScreen(
                 delay(4000) // Consulta al servidor cada 4 segundos para no saturar tu API
 
                 try {
-                    // 💡 AQUÍ HACES TU LLAMADA DE RETROFIT A FASTAPI
-                    // Ejemplo hipotético: val respuesta = RetrofitClient.apiService.verificarEstadoPedido(idPedidoCreado!!)
-                    // Supongamos que tu backend responde con un objeto que tiene el campo 'estado'
+                    val respuesta = RetrofitClient.apiService.verificarEstadoPedido(idPedidoCreado!!)
 
-                    val estadoServidor = "PENDIENTE" // TODO: Sustituir por: respuesta.estado
+                    if (respuesta.isSuccessful && respuesta.body() != null) {
+                        val statusResponse = respuesta.body()!!
 
-                    if (estadoServidor == "CONFIRMADO") {
-                        pagoConfirmadoPorBarista = true
-                        procesandoEfectivo = false
-                        pagoExitoso = true // Esto disparará tu animación de éxito existente, limpiará el carrito y hará el popBackStack()
-                    } else if (estadoServidor == "RECHAZADO") {
-                        procesandoEfectivo = false
-                        // Opcional: Podrías prender un estado para mostrar un diálogo de "Pedido Cancelado por Cocina"
-                        break
+                        println("🔍 [POLLING] Consultando pedido ${idPedidoCreado}. Estado en backend: ${statusResponse.estado}")
+
+                        // Evaluamos el estado exacto que configuramos en el Backend
+                        when (statusResponse.estado) {
+                            "PROCESANDO" -> {
+                                // ¡El barista ya lo aceptó!
+                                pagoConfirmadoPorBarista = true
+                                procesandoEfectivo = false
+
+                                // 💡 AQUÍ LIMPIAS TU CARRITO LOCAL DIRECTO EN LA UI
+                                // Ejemplo si tu ViewModel maneja el carrito:
+                                // menuViewModel.limpiarCarrito()
+
+                                pagoExitoso = true // Detona tu animación, popBackStack, etc.
+                            }
+                            "RECHAZADO", "CANCELADO" -> {
+                                procesandoEfectivo = false
+                                // Opcional: mostrar un Toast o diálogo de error al alumno
+                                break
+                            }
+                            "PENDIENTE_PAGO" -> {
+                                // No hace nada, sigue el ciclo 'while' y vuelve a preguntar en 4 segundos
+                            }
+                        }
+                    } else {
+                        println("⚠️ [POLLING] El servidor respondió con un error: ${respuesta.code()}")
                     }
                 } catch (e: Exception) {
                     println("❌ [POLLING ERROR] Error al consultar estado: ${e.message}")
@@ -305,3 +326,9 @@ fun CartScreen(
         )
     }
 }
+
+data class PedidoStatusResponse(
+    val pedido_id: String,
+    val estado: String,
+    val mensaje: String
+)

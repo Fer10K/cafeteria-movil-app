@@ -11,6 +11,7 @@ import com.example.cafeteriaapp.domain.model.LoginResponse
 import com.example.cafeteriaapp.domain.model.PedidoCreateRequest
 import com.example.cafeteriaapp.domain.model.PedidoResponse
 import com.example.cafeteriaapp.domain.model.ProductoResponse
+import com.example.cafeteriaapp.ui.screen.PedidoStatusResponse
 import retrofit2.Response
 
 import retrofit2.http.Body
@@ -50,8 +51,8 @@ interface CafeteriaApiService {
     ): PedidoResponse
 
 
-    @GET("pedidos/{id}/estado")
+    @GET("pedidos/{pedidoId}/status")
     suspend fun verificarEstadoPedido(
-        @Path("id") pedidoId: String
-    ): PedidoResponse
+        @Path("pedidoId") pedidoId: String
+    ):Response<PedidoStatusResponse>
 }
