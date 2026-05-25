@@ -8,9 +8,15 @@ import com.example.cafeteriaapp.domain.model.RegistroRequest
 import com.example.cafeteriaapp.domain.model.RegistroResponse
 import com.example.cafeteriaapp.domain.model.LoginRequest
 import com.example.cafeteriaapp.domain.model.LoginResponse
+import com.example.cafeteriaapp.domain.model.PedidoCreateRequest
+import com.example.cafeteriaapp.domain.model.PedidoResponse
+import com.example.cafeteriaapp.domain.model.ProductoResponse
+import retrofit2.Response
 
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 interface CafeteriaApiService {
 
@@ -34,4 +40,18 @@ interface CafeteriaApiService {
     suspend fun loginUsuario(
         @Body request: LoginRequest
     ): retrofit2.Response<LoginResponse>
+
+    @GET("productos")
+    suspend fun obtenerProductos(): Response<List<ProductoResponse>>
+
+    @POST("pedidos")
+    suspend fun crearPedido(
+        @Body pedido: PedidoCreateRequest
+    ): PedidoResponse
+
+
+    @GET("pedidos/{id}/estado")
+    suspend fun verificarEstadoPedido(
+        @Path("id") pedidoId: String
+    ): PedidoResponse
 }

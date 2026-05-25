@@ -87,9 +87,13 @@ class AuthViewModel : ViewModel() {
                         password
                     )
                 )
+                val body = response.body()!!
+                println("DEBUG LOGIN: El cuerpo del backend es: $body")
                 if (response.isSuccessful && response.body() != null) {
                     val body = response.body()!!
-                    _loginState.value = LoginUiState.Success(body.usuario_id, body.nombre_completo)
+
+                    println("DEBUG LOGIN: El UUID extraído es: ${body.usuarioId}")
+                    _loginState.value = LoginUiState.Success(body.usuarioId, body.nombreCompleto)
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Credenciales incorrectas."
                     _loginState.value = LoginUiState.Error(errorMsg)

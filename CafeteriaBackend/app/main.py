@@ -5,22 +5,39 @@ from app.config import supabase
 from app.services.ai_service import AIService
 from app.services.gamification_service import GamificationService
 from app.services.auth_service import AuthService
+from app.services.product_service import ProductoService
+from app.services.pedido_service import PedidoService
+
 from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse
 from app.schemas.gamification_schema import ProcesarCompraRequest, ProcesarCompraResponse
 from app.schemas.register_schema import RegistroUsuarioResponse, RegistroUsuarioInput
 from app.schemas.login_schema import LoginUsuarioInput, LoginUsuarioResponse
+from app.schemas.product_schema import ProductoResponse
+from app.schemas.pedido_schema import PedidoCreateRequest, PedidoResponse
+from typing import List
+
 
 
 # services
 ai_service = AIService()
 gamification_service = GamificationService()
 auth_service = AuthService()
+producto_service = ProductoService()
+pedido_service = PedidoService()
 
 # 3. Inicializar la aplicación FastAPI
 app = FastAPI(
     title="Cafeteria Universitaria API",
     description="Backend de utilidad para el control de gamificación e Inteligencia Artificial",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # 💡 Esto permite que tu celular físico pueda leer el JSON completo
+    allow_credentials=True,
+    allow_methods=["*"], # Permite GET, POST, etc.
+    allow_headers=["*"],
 )
 
 # 4. Configurar CORS (Crucial para permitir conexiones externas)
@@ -106,4 +123,34 @@ async def login_estudiante(payload: LoginUsuarioInput):
         raise HTTPException(
             status_code=401,
             detail=str(e)
+        )
+
+#Obtener productos
+@app.get("/productos", response_model=List[ProductoResponse], tags=["Catálogo"])
+def listar_productos():
+    """
+    Retorna todos los productos disponibles en la cafetería 
+    junto con el nombre de su categoría correspondiente.
+    """
+    try:
+
+        return producto_service.obtener_todos_los_productos()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/pedidos", response_model=PedidoResponse, tags=["Pedidos"])
+async def crear_pedido(payload: PedidoCreateRequest):
+    """
+    Endpoint real que recibe la orden desde el dispositivo Android,
+    valida e impacta las tablas de pedidos en Supabase.
+    """
+    try:
+        # CAMBIO: Ahora llamamos a la lógica conectada a Supabase
+        resultado = await pedido_service.procesar_pedido_real(payload)
+        return resultado
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Error al procesar/insertar el pedido: {str(e)}"
         )

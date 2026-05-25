@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.cafeteria.ui.screen.DetalleCompraScreen
+import com.example.cafeteriaapp.ui.MainApp
 import com.example.cafeteriaapp.ui.screen.LoginScreen
 import com.example.cafeteriaapp.ui.screen.RecomendacionScreen
 import com.example.cafeteriaapp.ui.screen.RegistroScreen
@@ -18,18 +19,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             CafeteriaAppTheme {
-
-                LoginScreen(
-                    onLoginExitoso = { usuarioId ->
-                        println("Login exitoso: $usuarioId")
-                    },
-                    onIrAlRegistro = {
-                        println("Ir al registro")
-                    }
-                )
-
+                MainApp()
             }
-
         }
     }
 }

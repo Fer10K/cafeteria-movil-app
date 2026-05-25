@@ -17,8 +17,8 @@ data class LoginRequest(
     val correo: String,
     val password: String)
 data class LoginResponse(
-    val usuario_id: String,
-    val nombre_completo: String,
-    val correo: String,
-    val mensaje: String
+    @SerializedName("usuario_id") val usuarioId: String,
+    @SerializedName("nombre_completo") val nombreCompleto: String,
+    @SerializedName("correo") val correo: String,
+    @SerializedName("mensaje") val mensaje: String
 )
