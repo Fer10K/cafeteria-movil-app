@@ -2,6 +2,11 @@ from datetime import datetime
 from app.config import supabase
 from app.schemas.pedido_schema import PedidoCreateRequest, PedidoResponse, PedidoStatusResponse
 
+from app.services.gamification_service import GamificationService 
+from app.schemas.gamification_schema import ProcesarCompraRequest
+
+gamification_service = GamificationService()
+
 class PedidoService:
 
     async def verificar_estado_pedido(self, pedido_id: str) -> PedidoStatusResponse:
@@ -34,6 +39,8 @@ class PedidoService:
     async def procesar_pedido_real(self, pedido: PedidoCreateRequest) -> PedidoResponse:
         # 1. Calcular el monto total sumando productos y extras de forma dinámica
         total_calculado = 0.0
+        cantidad_productos_total = 0
+
         for item in pedido.items:
             costo_extras = sum(extra.precio_adicional for extra in item.extras)
             total_calculado += (item.precio_unitario_base + costo_extras) * item.cantidad
@@ -50,7 +57,6 @@ class PedidoService:
         }
         
         res_pedido = supabase.table("pedidos").insert(pedido_data).execute()
-        
         if not res_pedido.data:
             raise Exception("No se pudo registrar el pedido en la tabla 'pedidos' de Supabase.")
             
@@ -85,9 +91,31 @@ class PedidoService:
                     })
                 supabase.table("pedido_item_extras").insert(extras_data_list).execute()
 
+
+        #INSERSION DEL MODULO DE GAMIFICACION
+        gamificacion_data = None
+        if pedido.metodo_pago == "NFC":
+            try:
+                # Armamos el request que tu GamificationService espera
+                payload_gamificacion = ProcesarCompraRequest(
+                    usuario_id=pedido.usuario_id,
+                    monto_total=total_calculado,
+                    cantidad_productos=cantidad_productos_total,
+                    es_primer_compra_dia=False # Puedes conectar aquí tu validación horaria posterior
+                )
+                # Ejecutamos tu método asíncrono
+                gamificacion_data = await gamification_service.procesar_transaccion(payload_gamificacion)
+            except Exception as e:
+                print(f"[GAMIFICACIÓN ERROR] No se pudieron otorgar puntos: {str(e)}")
+
+
         # 5. Formatear fecha UTC legible a un string estándar para el front
         fecha_raw = nuevo_pedido["fecha_creacion"].replace("+00:00", "")
         fecha_legible = datetime.fromisoformat(fecha_raw).strftime("%Y-%m-%d %H:%M:%S")
+
+        msg_final = "¡Pedido registrado!"
+        if gamificacion_data:
+            msg_final = f"¡Pago NFC Exitoso! Ganaste +{gamificacion_data['xp_ganada']} XP. Nivel actual: {gamificacion_data['nivel_actual']}"
 
         # 6. Retornar la respuesta exacta que Kotlin espera recibir
         return PedidoResponse(
@@ -96,5 +124,5 @@ class PedidoService:
             estado=nuevo_pedido["estado"],
             monto_total=float(nuevo_pedido["monto_total"]),
             fecha_creacion=fecha_legible,
-            mensaje="¡Pedido registrado y procesado exitosamente en base de datos!"
+            mensaje=msg_final
         )

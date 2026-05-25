@@ -55,4 +55,9 @@ interface CafeteriaApiService {
     suspend fun verificarEstadoPedido(
         @Path("pedidoId") pedidoId: String
     ):Response<PedidoStatusResponse>
+
+    @GET("gamificacion/perfil/{usuario_id}")
+    suspend fun obtenerPerfilGamificacion(
+        @Path("usuario_id") usuarioId: String
+    ): Response<ProcesarCompraResponse>
 }

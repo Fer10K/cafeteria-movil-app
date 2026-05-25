@@ -13,12 +13,15 @@ import com.example.cafeteriaapp.ui.screen.LoginScreen
 import com.example.cafeteriaapp.ui.screen.MenuScreen
 import com.example.cafeteriaapp.ui.viewmodel.MenuViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.cafeteriaapp.ui.screen.SettingsScreen
 
 object Destinos {
     const val LOGIN = "login"
     const val REGISTRO = "registro"
     const val HOME = "home"
     const val CARRITO = "carrito"
+    const val GAMIFICACION = "gamificacion"
+    const val AJUSTES = "ajustes"
 }
 
 @Composable
@@ -39,12 +42,12 @@ fun MainApp() {
             LoginScreen(
                 onLoginExitoso = { uuid ->
                     sessionManager.guardarSesion(uuid)
-
                     navController.navigate(Destinos.HOME) {
                         popUpTo(Destinos.LOGIN) { inclusive = true }
                     }
                 },
-                onIrAlRegistro = {
+                onIrARegistro = {
+                    // 🚀 El ruteo se resuelve aquí afuera, en el contenedor principal
                     navController.navigate(Destinos.REGISTRO)
                 }
             )
@@ -53,14 +56,40 @@ fun MainApp() {
         // --- PANTALLA PRINCIPAL
         composable(Destinos.HOME) {
             MenuScreen(
-                onIrAlCarritoClick = { navController.navigate("carrito") }
+                onIrAlCarritoClick = { navController.navigate("carrito") },
+                onIrAGamificacionClick = { navController.navigate(Destinos.GAMIFICACION) },
+                onIrAAjustesClick = { navController.navigate(Destinos.AJUSTES) }
             )
         }
+
+        ///AJUSTES
+        composable(Destinos.AJUSTES) {
+            SettingsScreen(
+                onCerrarSesion = {
+                    sessionManager.cerrarSesion()
+
+                    navController.navigate(Destinos.LOGIN) {
+                        popUpTo(Destinos.HOME) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // DE CARRITO -----
         composable(Destinos.CARRITO) {
             CartScreen(
                 navController = navController,
                 menuViewModel = menuViewModel
             )
+        }
+
+        // --- PANTALLA DE GAMIFICACIÓN---
+        composable(Destinos.GAMIFICACION) {
+            com.example.cafeteriaapp.ui.screen.DetalleCompraScreen()
         }
     }
 }

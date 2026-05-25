@@ -10,6 +10,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.example.cafeteriaapp.ui.Destinos
 import com.example.cafeteriaapp.ui.viewmodel.AuthViewModel
 import com.example.cafeteriaapp.ui.viewmodel.LoginUiState
 
@@ -17,7 +19,7 @@ import com.example.cafeteriaapp.ui.viewmodel.LoginUiState
 fun LoginScreen(
     authViewModel: AuthViewModel = viewModel(),
     onLoginExitoso: (String) -> Unit,
-    onIrAlRegistro: () -> Unit
+    onIrARegistro: () -> Unit // 💡 En lugar de pasar todo el NavController, solo pasas la acción
 ) {
     var correo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -69,7 +71,7 @@ fun LoginScreen(
             }
         }
 
-        TextButton(onClick = onIrAlRegistro, modifier = Modifier.padding(top = 16.dp)) {
+        TextButton(onClick = onIrARegistro) {
             Text("¿No tienes cuenta? Regístrate aquí")
         }
 

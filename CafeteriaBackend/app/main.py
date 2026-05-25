@@ -171,3 +171,50 @@ async def obtener_estatus_pedido(pedido_id: str):
             status_code=404, 
             detail=f"Error al consultar el estado del pedido: {str(e)}"
         )
+
+
+@app.get("/gamificacion/perfil/{usuario_id}", response_model=ProcesarCompraResponse, tags=["Gamificación"])
+async def obtener_perfil_gamificacion_estudiante(usuario_id: str):
+    """
+    Endpoint autónomo que consulta Supabase para extraer los puntos acumulados,
+    el nivel y la lista completa de logros desbloqueados de un estudiante específico.
+    """
+    try:
+        # 1. Consultar la tabla perfiles_gamificacion para obtener nivel y xp_total
+        res_perfil = supabase.table("perfiles_gamificacion").select("xp_total", "nivel").eq("usuario_id", usuario_id).maybe_single().execute()
+        
+        xp_total = 0
+        nivel = 1
+        if res_perfil and res_perfil.data:
+            xp_total = res_perfil.data.get("xp_total", 0)
+            nivel = res_perfil.data.get("nivel", 1)
+        
+        # 2. Consultar la relación de logros usando un INNER JOIN implícito de Supabase
+        # Esto cruza la tabla relacional 'usuario_logros' con la tabla maestra 'logros'
+        res_logros = supabase.table("usuario_logros").select("logros(id, nombre, descripcion, icono_url)").eq("usuario_id", usuario_id).execute()
+        
+        logros_list = []
+        if res_logros and res_logros.data:
+            for item in res_logros.data:
+                # Extraemos de manera segura el diccionario anidado que genera la relación
+                logro_maestro = item.get("logros")
+                if logro_maestro:
+                    logros_list.append({
+                        "id": logro_maestro.get("id"),
+                        "nombre": logro_maestro.get("nombre"),
+                        "descripcion": logro_maestro.get("descripcion"),
+                        "icono_url": logro_maestro.get("icono_url")
+                    })
+        
+        # Retornamos estructurado exactamente bajo el molde de ProcesarCompraResponse
+        return {
+            "usuario_id": usuario_id,
+            "xp_ganada": 0, # Al ser una consulta GET pura, no se añade nueva XP
+            "xp_actual": xp_total,
+            "nivel_actual": nivel,
+            "subio_de_nivel": False,
+            "logros_nuevos": logros_list
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al leer Supabase: {str(e)}")

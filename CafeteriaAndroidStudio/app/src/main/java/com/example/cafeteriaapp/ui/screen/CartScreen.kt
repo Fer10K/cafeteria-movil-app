@@ -230,8 +230,13 @@ fun CartScreen(
                     )
                 }
             },
-            confirmButton = {} // Sin botones para forzar la espera
+            confirmButton = {}
         )
+        LaunchedEffect(Unit) {
+            delay(3000)
+            procesandoNFC = false
+            pagoExitoso = true
+        }
     }
 
     if (pagoExitoso) {
@@ -272,9 +277,17 @@ fun CartScreen(
                                 pagoConfirmadoPorBarista = true
                                 procesandoEfectivo = false
 
-                                // 💡 AQUÍ LIMPIAS TU CARRITO LOCAL DIRECTO EN LA UI
-                                // Ejemplo si tu ViewModel maneja el carrito:
-                                // menuViewModel.limpiarCarrito()
+                                try {
+                                    val requestGami = com.example.cafeteria.data.model.ProcesarCompraRequest(
+                                        usuario_id = "63f28ccd-9173-40b2-b919-01b784eb148f",
+                                        monto_total = total,
+                                        cantidad_productos = itemsCarrito.sumOf { it.cantidad },
+                                        es_primer_compra_dia = false
+                                    )
+                                    RetrofitClient.apiService.procesarCompra(requestGami)
+                                } catch (e: Exception) {
+                                    println("❌ Error al otorgar XP en pago por caja: ${e.message}")
+                                }
 
                                 pagoExitoso = true // Detona tu animación, popBackStack, etc.
                             }

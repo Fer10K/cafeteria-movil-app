@@ -15,6 +15,7 @@ import com.example.cafeteriaapp.domain.model.ProductoResponse
 import com.example.cafeteriaapp.domain.model.toNetworkPayload
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 sealed interface PedidoNetworkState {
@@ -200,5 +201,26 @@ class MenuViewModel: ViewModel() {
     }
     fun resetPedidoState() {
         pedidoNetworkState = PedidoNetworkState.Idle
+    }
+
+    private val _gamificationUiState = MutableStateFlow<GamificationUiState>(GamificationUiState.Idle)
+    val gamificationUiState: StateFlow<GamificationUiState> = _gamificationUiState.asStateFlow()
+
+    fun cargarPerfilGamificacion(usuarioId: String) {
+        viewModelScope.launch {
+            // 🚀 CORRECCIÓN: Asignamos al nuevo estado de gamificación, no al del menú
+            _gamificationUiState.value = GamificationUiState.Loading
+            try {
+                val response = RetrofitClient.apiService.obtenerPerfilGamificacion(usuarioId)
+
+                if (response.isSuccessful && response.body() != null) {
+                    _gamificationUiState.value = GamificationUiState.Success(data = response.body()!!)
+                } else {
+                    _gamificationUiState.value = GamificationUiState.Error("No se pudieron obtener tus estadísticas.")
+                }
+            } catch (e: Exception) {
+                _gamificationUiState.value = GamificationUiState.Error(e.localizedMessage ?: "Error de red")
+            }
+        }
     }
 }

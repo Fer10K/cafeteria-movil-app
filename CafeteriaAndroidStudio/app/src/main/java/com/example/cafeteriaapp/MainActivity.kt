@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.cafeteria.ui.screen.DetalleCompraScreen
 import com.example.cafeteriaapp.ui.MainApp
 import com.example.cafeteriaapp.ui.screen.LoginScreen
 import com.example.cafeteriaapp.ui.screen.RecomendacionScreen
