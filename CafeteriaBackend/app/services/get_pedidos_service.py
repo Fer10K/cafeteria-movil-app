@@ -142,6 +142,72 @@ class BaristaService:
             print(f"Error en service al obtener entregados: {str(e)}")
             raise e
 
+    async def obtener_pedidos_porconfirmar(self) -> List[PedidoBaristaResponse]:
+        """
+        Consulta en Supabase únicamente los pedidos que ya fueron entregados 
+        al alumno para el historial de la barra.
+        """
+        try:
+            # 1. Filtramos estrictamente por el estado CANCELADO
+            pedidos_query = self.db.table("pedidos")\
+                .select("pedido_id, usuario_id, estado, monto_total")\
+                .eq("estado", "PENDIENTE_PAGO")\
+                .execute()
+
+            lista_pedidos_bd = pedidos_query.data
+            if not lista_pedidos_bd:
+                return []
+
+            respuesta_final = []
+
+            # 2. Mismo mapeo relacional recursivo (Items -> Extras)
+            for ped in lista_pedidos_bd:
+                p_id = ped.get("pedido_id")
+
+                items_query = self.db.table("pedido_items")\
+                    .select("id, nombre_producto, cantidad")\
+                    .eq("pedido_id", p_id)\
+                    .execute()
+
+                lista_productos = []
+
+                for item in items_query.data:
+                    item_id = item.get("id")
+
+                    extras_query = self.db.table("pedido_item_extras")\
+                        .select("nombre_extra")\
+                        .eq("pedido_item_id", item_id)\
+                        .execute()
+
+                    lista_extras = [
+                        ExtraResponse(nombre_extra=ext.get("nombre_extra")) 
+                        for ext in extras_query.data
+                    ]
+
+                    lista_productos.append(
+                        ItemPedidoResponse(
+                            pedido_item_id=item_id,
+                            nombre_producto=item.get("nombre_producto"),
+                            cantidad=item.get("cantidad"),
+                            extras=lista_extras
+                        )
+                    )
+
+                respuesta_final.append(
+                    PedidoBaristaResponse(
+                        pedido_id=p_id,
+                        usuario_id=ped.get("usuario_id"),
+                        estado=ped.get("estado"),
+                        monto_total=float(ped.get("monto_total")),
+                        productos=lista_productos
+                    )
+                )
+
+            return respuesta_final
+
+        except Exception as e:
+            print(f"Error en service al obtener entregados: {str(e)}")
+            raise e
 
 
     async def obtener_pedidos_cancelados(self) -> List[PedidoBaristaResponse]:

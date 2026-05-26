@@ -310,3 +310,14 @@ async def obtener_historial_cancelados():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al recuperar el historial de entregas: {str(e)}"
         )
+
+@app.get("/barista/pedidos/porconfirmar", response_model=List[PedidoBaristaResponse],status_code=status.HTTP_200_OK,summary="Obtener historial de pedidos entregados",description="Retorna una lista con el desglose de todas las comandas que ya fueron finalizadas y entregadas con éxito.")
+async def obtener_historial_porconfirmar():
+    try:
+        return await barista_service.obtener_pedidos_porconfirmar()
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al recuperar el historial de entregas: {str(e)}"
+        )
