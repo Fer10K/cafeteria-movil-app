@@ -1,59 +1,55 @@
 package com.example.cafeteriaapp.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.example.cafeteria.data.model.PosicionLeaderboard
-import com.example.cafeteriaapp.ui.components.RecomendacionIaCard // IMPORTANTE: Tu Card basada en Popup
+import com.example.cafeteriaapp.ui.components.RecomendacionIaCard
 import com.example.cafeteriaapp.ui.viewmodel.AiUiState
 import com.example.cafeteriaapp.ui.viewmodel.CafeteriaViewModel
 import com.example.cafeteriaapp.ui.viewmodel.PerfilUiState
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.material3.ProgressIndicatorDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(
     usuarioId: String,
-    viewModel: CafeteriaViewModel = viewModel()
+    viewModel: CafeteriaViewModel = viewModel(),
+    onBack: () -> Unit
 ) {
-    // Escuchamos el estado del Perfil (Leaderboard)
     val pState by viewModel.perfilState.collectAsState()
-
-    // 🤖 1. ESCUCHAMOS EL ESTADO DE LA IA QUE ANTES ESTABA IGNORADO
     val aiUiState by viewModel.aiState.collectAsState()
-
-    // Estado para controlar si el usuario cierra el banner manualmente
     var mostrarBanner by remember { mutableStateOf(true) }
 
     LaunchedEffect(usuarioId) {
         if (usuarioId.isNotEmpty()) {
-            mostrarBanner = true // Cada que se recargue, reiniciamos el visor del banner
+            mostrarBanner = true
             viewModel.cargarPerfilGamificacion(usuarioId)
         }
     }
 
-    // 2. LIMPIEZA DE MEMORIA: Al salir de la pantalla de gamificación, reseteamos la recomendación
     DisposableEffect(Unit) {
         onDispose {
             viewModel.limpiarRecomendacion()
         }
     }
 
-    // 3. INYECTAMOS EL POPUP DE IA EVALUANDO EL SEALED INTERFACE
     when (val aiState = aiUiState) {
         is AiUiState.Success -> {
             RecomendacionIaCard(
@@ -69,6 +65,11 @@ fun PerfilScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Tabla de Posiciones", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -94,24 +95,122 @@ fun PerfilScreen(
                             val miXp = state.xpPropia
                             val miNivel = state.nivelPropio
 
+                            // 📊 CÁLCULO DE GAMIFICACIÓN DINÁMICO (Asumiendo que cada nivel requiere 1000 XP)
+                            val xpDelNivelActual = miXp % 1000
+                            val progresoFlotante = xpDelNivelActual.toFloat() / 1000f
+
+                            // 🎨 DEGRADADO PREMIUM CON TUS COLORES DE SISTEMA
+                            val degradadoPremium = Brush.horizontalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.8f)
+                                )
+                            )
+
+                            // 🌟 NUEVA TARJETA DE PERFIL IMPACTANTE
                             Card(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Column(
+                                    modifier = Modifier
+                                        .background(brush = degradadoPremium)
+                                        .padding(20.dp)
                                 ) {
-                                    Icon(Icons.Default.Star, "Nivel", tint = Color(0xFFFFB300), modifier = Modifier.size(36.dp))
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text("Mi Perfil (Nivel $miNivel)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                        Text("$miXp xp totales acumulados", style = MaterialTheme.typography.bodyMedium)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Stars,
+                                                contentDescription = "Icono de Nivel",
+                                                tint = Color(0xFFFFB300),
+                                                modifier = Modifier.size(40.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column {
+                                                Text(
+                                                    text = "Perfil de Cliente",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                Text(
+                                                    text = "Miembro Cafetería",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text(
+                                                text = "Nivel $miNivel",
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                            )
+                                        }
                                     }
+
+                                    Spacer(modifier = Modifier.height(20.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.Bottom
+                                    ) {
+                                        Text(
+                                            text = "Progreso de Nivel",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                        )
+                                        Text(
+                                            text = "$xpDelNivelActual / 1000 XP",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    LinearProgressIndicator(
+                                        progress = { progresoFlotante },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(10.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    Text(
+                                        text = "✨ $miXp XP totales acumulados",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Normal,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
 
-                            Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            // Subtítulo del Leaderboard
+                            Row(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Icon(Icons.Default.EmojiEvents, "Podio", tint = MaterialTheme.colorScheme.secondary)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Otros Competidores de la Escuela", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -119,7 +218,6 @@ fun PerfilScreen(
                         }
 
                         itemsIndexed(state.leaderboard) { index, compañero ->
-                            // Pasamos el índice real para pintar el podio dinámico
                             UsuarioLeaderboardCard(posicion = index + 2, datos = compañero)
                         }
                     }
@@ -131,6 +229,7 @@ fun PerfilScreen(
         }
     }
 }
+
 @Composable
 fun UsuarioLeaderboardCard(posicion: Int, datos: PosicionLeaderboard) {
     Card(
@@ -140,8 +239,6 @@ fun UsuarioLeaderboardCard(posicion: Int, datos: PosicionLeaderboard) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-
-
         Row(
             modifier = Modifier
                 .padding(12.dp)
@@ -149,7 +246,6 @@ fun UsuarioLeaderboardCard(posicion: Int, datos: PosicionLeaderboard) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // LADO IZQUIERDO: Número de posición + Avatar de Supabase
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "#$posicion",
@@ -159,21 +255,8 @@ fun UsuarioLeaderboardCard(posicion: Int, datos: PosicionLeaderboard) {
                     color = MaterialTheme.colorScheme.secondary
                 )
 
-                // Imagen de perfil cargada asíncronamente desde la URL
-                AsyncImage(
-                    model = datos.avatar_url,
-                    contentDescription = "Avatar de ${datos.nombre}",
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop,
-                    placeholder = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_gallery), // Temporal mientras carga
-                    error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image) // Fallback si se cae la red
-                )
-
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // CENTRO: Nombre del alumno y su nivel debajo
                 Column {
                     Text(
                         text = datos.nombre,
@@ -188,7 +271,6 @@ fun UsuarioLeaderboardCard(posicion: Int, datos: PosicionLeaderboard) {
                 }
             }
 
-            // LADO DERECHO: Puntos formateados en "XXXxp."
             Text(
                 text = "${datos.xp_total}xp.",
                 style = MaterialTheme.typography.titleMedium,

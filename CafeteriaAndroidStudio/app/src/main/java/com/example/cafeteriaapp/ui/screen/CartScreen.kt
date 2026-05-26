@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
@@ -31,7 +32,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun CartScreen(
     navController: NavController,
-    menuViewModel: MenuViewModel
+    menuViewModel: MenuViewModel,
+    onBack: () -> Unit
 ) {
     val itemsCarrito = CarritoRepository.items
     val total = CarritoRepository.precioTotalCarrito
@@ -92,6 +94,11 @@ fun CartScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Mi Carrito", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                    }
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )

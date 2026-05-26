@@ -63,7 +63,7 @@ fun MenuScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Cafetherian",
+                        text = "Cafe Movil",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )

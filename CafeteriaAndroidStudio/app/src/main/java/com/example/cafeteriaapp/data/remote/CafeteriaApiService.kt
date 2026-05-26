@@ -9,6 +9,7 @@ import com.example.cafeteriaapp.domain.model.RegistroRequest
 import com.example.cafeteriaapp.domain.model.RegistroResponse
 import com.example.cafeteriaapp.domain.model.LoginRequest
 import com.example.cafeteriaapp.domain.model.LoginResponse
+import com.example.cafeteriaapp.domain.model.PedidoBaristaResponse
 import com.example.cafeteriaapp.domain.model.PedidoCreateRequest
 import com.example.cafeteriaapp.domain.model.PedidoResponse
 import com.example.cafeteriaapp.domain.model.ProductoResponse
@@ -17,8 +18,10 @@ import retrofit2.Response
 
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface CafeteriaApiService {
 
@@ -71,4 +74,20 @@ interface CafeteriaApiService {
     suspend fun obtenerPedidosUsuario(
         @Path("usuario_id") usuarioId: String
     ): Response<List<String>>
+
+    @GET("barista/pedidos")
+    suspend fun obtenerPedidosBarista(): Response<List<PedidoBaristaResponse>>
+
+    @PATCH("barista/pedidos/{pedido_id}/estado")
+    suspend fun actualizarEstadoPedido(
+        @Path("pedido_id") pedidoId: String,
+        @Query("nuevo_estado") nuevoEstado: String
+    ): Response<Unit>
+
+    @GET("barista/pedidos/entregados")
+    suspend fun obtenerPedidosEntregados(): Response<List<PedidoBaristaResponse>>
+
+    @GET("barista/pedidos/cancelados")
+    suspend fun obtenerPedidosCancelados(): Response<List<PedidoBaristaResponse>>
+
 }

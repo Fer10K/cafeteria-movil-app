@@ -11,14 +11,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.cafeteriaapp.data.local.SessionManager
+import com.example.cafeteriaapp.ui.screen.BaristaCanceladosScreen
 import com.example.cafeteriaapp.ui.screen.BaristaHomeScreen
+import com.example.cafeteriaapp.ui.screen.BaristaEntregadosScreen
 import com.example.cafeteriaapp.ui.screen.CartScreen
 import com.example.cafeteriaapp.ui.screen.LoginScreen
 import com.example.cafeteriaapp.ui.screen.MenuScreen
 import com.example.cafeteriaapp.ui.screen.RegistroScreen
 import com.example.cafeteriaapp.ui.screen.SettingsScreen
 import com.example.cafeteriaapp.ui.viewmodel.AuthViewModel
+import com.example.cafeteriaapp.ui.viewmodel.BaristaViewModel
 import com.example.cafeteriaapp.ui.viewmodel.MenuViewModel
+
 
 object Destinos {
     const val LOGIN = "login"
@@ -28,6 +32,8 @@ object Destinos {
     const val CARRITO = "carrito"
     const val GAMIFICACION = "gamificacion"
     const val AJUSTES = "ajustes"
+    const val BARISTA_ENTREGADOS = "barista_entregados"
+    const val BARISTA_CANCELADOS = "barista_cancelados"
 }
 
 @Composable
@@ -37,6 +43,7 @@ fun MainApp() {
     val sessionManager = SessionManager(context)
     val menuViewModel: MenuViewModel = viewModel()
     val authViewModel: AuthViewModel = viewModel()
+    val baristaViewModel: BaristaViewModel = viewModel()
     val authState by authViewModel._registroState.collectAsState()
 
     val uuid = sessionManager.obtenerSession()
@@ -102,7 +109,32 @@ fun MainApp() {
         // --- ☕ PANTALLA PRINCIPAL BARISTA ---
         composable(Destinos.BARISTA_HOME) {
             BaristaHomeScreen(
-                onIrAAjustesClick = { navController.navigate(Destinos.AJUSTES) }
+                baristaViewModel = baristaViewModel,
+                onIrAEntregados = { navController.navigate(Destinos.BARISTA_ENTREGADOS) },
+                onIrACancelados = { navController.navigate(Destinos.BARISTA_CANCELADOS) },
+                onCerrarSesion = {
+                    sessionManager.cerrarSession()
+                    navController.navigate(Destinos.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        // PANTALLA DE PEDIDOS CANCELADOS ---
+        composable(Destinos.BARISTA_CANCELADOS) {
+            BaristaCanceladosScreen(
+                baristaViewModel = baristaViewModel,
+                onRegresar = { navController.popBackStack() }
+            )
+        }
+
+        //---- BARISTA ENTREGADOS
+        composable(Destinos.BARISTA_ENTREGADOS) {
+            BaristaEntregadosScreen(
+                baristaViewModel = baristaViewModel,
+                onRegresar = { navController.popBackStack() } // 🔥 Desapila y regresa a BARISTA_HOME de forma segura
             )
         }
 
@@ -124,7 +156,8 @@ fun MainApp() {
         composable(Destinos.CARRITO) {
             CartScreen(
                 navController = navController,
-                menuViewModel = menuViewModel
+                menuViewModel = menuViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -132,7 +165,8 @@ fun MainApp() {
         composable(Destinos.GAMIFICACION) {
             val usuarioId = sessionManager.obtenerSession() ?: ""
             com.example.cafeteriaapp.ui.screen.PerfilScreen(
-                usuarioId = usuarioId
+                usuarioId = usuarioId,
+                onBack = { navController.popBackStack() }
             )
         }
     }

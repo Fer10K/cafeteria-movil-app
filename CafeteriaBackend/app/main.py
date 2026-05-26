@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import traceback
@@ -10,6 +9,8 @@ from app.services.gamification_service import GamificationService
 from app.services.auth_service import AuthService
 from app.services.product_service import ProductoService
 from app.services.pedido_service import PedidoService
+from app.services.get_pedidos_service import BaristaService
+
 
 from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse
 from app.schemas.gamification_schema import ProcesarCompraRequest, ProcesarCompraResponse, PosicionLeaderboard
@@ -17,6 +18,7 @@ from app.schemas.register_schema import RegistroUsuarioResponse, RegistroUsuario
 from app.schemas.login_schema import LoginUsuarioInput, LoginUsuarioResponse
 from app.schemas.product_schema import ProductoResponse
 from app.schemas.pedido_schema import PedidoCreateRequest, PedidoResponse, PedidoStatusResponse
+from app.schemas.get_pedidos_schema import PedidoBaristaResponse
 from typing import List
 
 
@@ -27,6 +29,7 @@ gamification_service = GamificationService()
 auth_service = AuthService()
 producto_service = ProductoService()
 pedido_service = PedidoService()
+barista_service = BaristaService()
 
 # 3. Inicializar la aplicación FastAPI
 app = FastAPI(
@@ -247,4 +250,63 @@ async def obtener_pedidos_usuario(usuario_id: str):
         raise HTTPException(
             status_code=500,
             detail=f"Error al procesar el historial relacional de pedidos: {str(e)}"
+        )
+
+
+
+#=========================================================================================
+
+@app.get("/barista/pedidos", response_model=List[PedidoBaristaResponse], status_code=status.HTTP_200_OK,summary="Obtener comandas activas para el Barista",description="Retorna una lista con todos los pedidos cuyo estado sea 'PROCESANDO' (en preparación) o 'LISTO' (esperando entrega) incluyendo el desglose de productos y extras.")
+async def obtener_pedidos_barista():
+    try:
+        return await barista_service.obtener_comandas_activas()
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error interno en el servidor al procesar la solicitud: {str(e)}"
+        )
+
+
+@app.patch("/barista/pedidos/{pedido_id}/estado",status_code=status.HTTP_200_OK,summary="Actualizar el estado de una comanda",description="Cambia el estado de un pedido (ej. de PROCESANDO a LISTO).")
+async def actualizar_estado_pedido(pedido_id: str, nuevo_estado: str):
+    try:
+        exito = await barista_service.cambiar_estado_pedido(pedido_id, nuevo_estado)
+        
+        if not exito:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No se encontró el pedido o no se pudo actualizar."
+            )
+            
+        return {"status": "success", "message": f"Pedido actualizado a {nuevo_estado} con éxito."}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error en el servidor: {str(e)}"
+        )
+
+@app.get("/barista/pedidos/entregados", response_model=List[PedidoBaristaResponse],status_code=status.HTTP_200_OK,summary="Obtener historial de pedidos entregados",description="Retorna una lista con el desglose de todas las comandas que ya fueron finalizadas y entregadas con éxito.")
+async def obtener_historial_entregados():
+    try:
+        return await barista_service.obtener_pedidos_entregados()
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al recuperar el historial de entregas: {str(e)}"
+        )
+
+@app.get("/barista/pedidos/cancelados", response_model=List[PedidoBaristaResponse],status_code=status.HTTP_200_OK,summary="Obtener historial de pedidos entregados",description="Retorna una lista con el desglose de todas las comandas que ya fueron finalizadas y entregadas con éxito.")
+async def obtener_historial_cancelados():
+    try:
+        return await barista_service.obtener_pedidos_cancelados()
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al recuperar el historial de entregas: {str(e)}"
         )

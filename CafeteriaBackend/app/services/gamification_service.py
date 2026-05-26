@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from supabase import Client
 from app.main import supabase
-from app.schemas.gamification_schema import ProcesarCompraRequest, LogroDesbloqueadoSchema, ProcesarCompraResponse, PosicionLeaderboard
+from app.schemas.gamification_schema import ProcesarCompraRequest, LogroDesbloqueadoSchema
 
 class GamificationService:
     def __init__(self):
