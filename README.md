@@ -1,17 +1,17 @@
-# Cafeteria App ☕🚀 (Y el poderoso backend Cineman)
+# Cafeteria App
 
 Este es el proyecto final para la cafetería de la escuela. Es una app nativa de Android (para los alumnos y los baristas) conectada a un backend en FastAPI y Supabase para poder pedir comida y café sin tener que hacer filas eternas entre clases.
 
 ---
 
-## 🔥 Lo que hace la app
+##  Lo que hace la app
 
 * **Para los alumnos:** Abres la app, eliges tu café o pan por categorías, le agregas tus extras (jarabes, tipo de leche, etc.), ves en tiempo real si tu pedido ya se está haciendo y vas ganando experiencia (XP) para subir de nivel como cliente VIP.
 * **Para los baristas:** Tienen una pantalla tipo tablero Kanban con 3 columnas (*Por Confirmar*, *En Proceso* y *Listos*). La primera columna se actualiza sola cada 4 segundos (Polling de fondo) para que en cuanto pagues, les aparezca la tarjeta arriba sin que tengan que refrescar la pantalla.
 
 ---
 
-## 🛠️ Tecnologías que usamos
+##  Tecnologías que usamos
 
 * **Android (Frontend):** Kotlin, Jetpack Compose, Retrofit 2 (para conectar con el back), OkHttp3 y Corrutinas para que no se trabe la interfaz.
 * **Backend:** FastAPI (Python) y Uvicorn.
