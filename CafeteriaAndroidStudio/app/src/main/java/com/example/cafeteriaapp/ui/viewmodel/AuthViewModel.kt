@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 sealed interface LoginUiState {
     object Idle : LoginUiState
     object Loading : LoginUiState
-    data class Success(val usuarioId: String, val nombre: String) : LoginUiState
+    data class Success(val usuarioId: String, val nombre: String, val role: String) : LoginUiState
     data class Error(val error: String) : LoginUiState
 }
 sealed interface RegistroUiState {
@@ -93,7 +93,7 @@ class AuthViewModel : ViewModel() {
                     val body = response.body()!!
 
                     println("DEBUG LOGIN: El UUID extraído es: ${body.usuarioId}")
-                    _loginState.value = LoginUiState.Success(body.usuarioId, body.nombreCompleto)
+                    _loginState.value = LoginUiState.Success(body.usuarioId, body.nombreCompleto, body.role)
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Credenciales incorrectas."
                     _loginState.value = LoginUiState.Error(errorMsg)

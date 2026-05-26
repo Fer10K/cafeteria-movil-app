@@ -9,3 +9,4 @@ class LoginUsuarioResponse(BaseModel):
     nombre_completo: str
     correo: str
     mensaje: str
+    rol: str

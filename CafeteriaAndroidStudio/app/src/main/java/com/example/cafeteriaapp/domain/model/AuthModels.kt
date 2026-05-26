@@ -15,10 +15,13 @@ data class RegistroResponse(
 
 data class LoginRequest(
     val correo: String,
-    val password: String)
+    val password: String
+)
+
 data class LoginResponse(
     @SerializedName("usuario_id") val usuarioId: String,
     @SerializedName("nombre_completo") val nombreCompleto: String,
     @SerializedName("correo") val correo: String,
-    @SerializedName("mensaje") val mensaje: String
+    @SerializedName("mensaje") val mensaje: String,
+    @SerializedName("rol") val role: String
 )

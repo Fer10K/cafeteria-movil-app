@@ -24,18 +24,22 @@ class AuthService:
 
             print("Buscar el nombre completo en la tabla")
             resultado_perfil = self.db.table("usuarios")\
-                .select("nombre")\
+                .select("nombre, rol")\
                 .eq("id", uuid_confirmado)\
                 .single()\
                 .execute()
 
             nombre_usuario = resultado_perfil.data.get("nombre", "Estudiante")
+            rol=resultado_perfil.data.get("rol")
+
+            print(rol)
 
             return LoginUsuarioResponse(
                 usuario_id=uuid_confirmado,
                 nombre_completo=nombre_usuario,
                 correo=datos.correo,
-                mensaje="Inicio de sesión exitoso."
+                mensaje="Inicio de sesión exitoso.",
+                rol=rol
             )
 
         except Exception as e:

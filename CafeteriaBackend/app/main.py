@@ -11,7 +11,7 @@ from app.services.auth_service import AuthService
 from app.services.product_service import ProductoService
 from app.services.pedido_service import PedidoService
 
-from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse, HistorialCompraSchema
+from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse
 from app.schemas.gamification_schema import ProcesarCompraRequest, ProcesarCompraResponse, PosicionLeaderboard
 from app.schemas.register_schema import RegistroUsuarioResponse, RegistroUsuarioInput
 from app.schemas.login_schema import LoginUsuarioInput, LoginUsuarioResponse
