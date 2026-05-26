@@ -44,7 +44,7 @@ class PedidoService:
             costo_extras = sum(extra.precio_adicional for extra in item.extras)
             total_calculado += (item.precio_unitario_base + costo_extras) * item.cantidad
 
-        estado_final = "PROCESANDO" if pedido.metodo_pago == "NFC" else pedido.estado
+        estado_final = "PROCESANDO"
 
         # Insertar en la tabla principal: 'pedidos'
         pedido_data = {
@@ -92,14 +92,14 @@ class PedidoService:
 
         #INSERSION DEL MODULO DE GAMIFICACION
         gamificacion_data = None
-        if pedido.metodo_pago == "NFC":
+        if pedido.metodo_pago:
             try:
                 # Armamos el request que tu GamificationService espera
                 payload_gamificacion = ProcesarCompraRequest(
                     usuario_id=pedido.usuario_id,
                     monto_total=total_calculado,
                     cantidad_productos=cantidad_productos_total,
-                    es_primer_compra_dia=False # Puedes conectar aquí tu validación horaria posterior
+                    es_primer_compra_dia=False
                 )
                 # Ejecutamos tu método asíncrono
                 gamificacion_data = await gamification_service.procesar_transaccion(payload_gamificacion)
@@ -113,7 +113,7 @@ class PedidoService:
 
         msg_final = "¡Pedido registrado!"
         if gamificacion_data:
-            msg_final = f"¡Pago NFC Exitoso! Ganaste +{gamificacion_data['xp_ganada']} XP. Nivel actual: {gamificacion_data['nivel_actual']}"
+            msg_final = f"¡Pago Exitoso! Ganaste +{gamificacion_data['xp_ganada']} XP. Nivel actual: {gamificacion_data['nivel_actual']}"
 
         # 6. Retornar la respuesta exacta que Kotlin espera recibir
         return PedidoResponse(
