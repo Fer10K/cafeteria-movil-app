@@ -12,6 +12,6 @@ services:
     volumes:
       - .:/code
     environment:
-      - SUPABASE_URL=${SUPABASE_URL}
+      - DATABASE_URL=${DATABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}

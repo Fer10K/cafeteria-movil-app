@@ -55,7 +55,7 @@ class AuthViewModel : ViewModel() {
                     _registroState.value = RegistroUiState.Success(body.usuarioId, body.mensaje)
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Error desconocido en el servidor"
-                    _registroState.value = RegistroUiState.Error(errorBody)
+                    _registroState.value = RegistroUiState.Error("Error desconocido en el servidord")
                 }
             } catch (e: Exception) {
                 _registroState.value = RegistroUiState.Error("Fallo de red: No se pudo conectar al servidor.")
