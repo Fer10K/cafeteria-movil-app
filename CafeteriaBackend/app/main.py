@@ -1,7 +1,7 @@
 import os
 import traceback
 from typing import List
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -12,6 +12,7 @@ from app.services.auth_service import AuthService
 from app.services.product_service import ProductoService
 from app.services.pedido_service import PedidoService
 from app.services.get_pedidos_service import BaristaService
+from app.services.websocket_manager import barista_manager
 
 # Esquemas Pydantic
 from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse
@@ -59,13 +60,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ==========================================
+# ENDPOINTS: WEB SOCKET BARISTAS:
+# ==========================================
+@app.websocket("/ws/baristas")
+async def websocket_baristas(websocket: WebSocket):
+    await barista_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        barista_manager.disconnect(websocket)
 
-# ==========================================
-# ENDPOINTS: HEALTH CHECK
-# ==========================================
+
+
 @app.get("/", tags=["Health"])
 def read_root():
-    # El healthcheck ahora monitorea la presencia de tu variable URL de Render
     return {
         "status": "online",
         "message": "Backend de la Cafeteria Universitaria operando con éxito",

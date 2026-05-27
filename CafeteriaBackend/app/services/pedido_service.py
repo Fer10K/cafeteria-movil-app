@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from app.schemas.pedido_schema import PedidoCreateRequest, PedidoResponse, PedidoStatusResponse
 from app.services.gamification_service import GamificationService 
 from app.schemas.gamification_schema import ProcesarCompraRequest
+from app.services.websocket_manager import barista_manager
 
 gamification_service = GamificationService()
 
@@ -66,7 +67,11 @@ class PedidoService:
             costo_extras = sum(extra.precio_adicional for extra in item.extras)
             total_calculado += (item.precio_unitario_base + costo_extras) * item.cantidad
 
-        estado_final = "PROCESANDO"
+        if pedido.metodo_pago == "NFC":
+            estado_final = "PROCESANDO"
+        else:
+            estado_final = "PENDIENTE_PAGO"
+        
 
         conn = None
         try:
@@ -141,6 +146,35 @@ class PedidoService:
             )
         finally:
             if conn: conn.close()
+
+
+        try:
+            # Mapeamos los items directamente desde el objeto 'pedido' que recibimos
+            items_barista = []
+            for item in pedido.items:
+                extras_lista = [{"nombre": e.nombre, "precio_adicional": e.precio_adicional} for e in item.extras] if item.extras else []
+                items_barista.append({
+                    "producto_id": item.producto_id,
+                    "nombre_producto": item.nombre_producto,
+                    "cantidad": item.cantidad,
+                    "extras": extras_lista
+                })
+
+            pedido_ws_payload = {
+                "pedido_id": id_del_pedido_creado,
+                "usuario_id": str(pedido.usuario_id),
+                "estado": estado_final,
+                "monto_total": round(total_calculado, 2),
+                "items": items_barista
+            }
+
+            # Emitimos el broadcast. Usamos 'await' porque la función del mánager es asíncrona.
+            await barista_manager.broadcast_nuevo_pedido(pedido_ws_payload)
+
+        except Exception as ws_err:
+            # Capturamos fallas de red del WS en un log para que una caída de la app del barista
+            # jamás arruine la experiencia de compra del alumno/cliente.
+            print(f"[WEBSOCKET ERROR] No se pudo alertar a los baristas: {str(ws_err)}")
 
 
         # 4. IMPACTO EN MÓDULO DE GAMIFICACIÓN (Se ejecuta por separado del commit principal 
