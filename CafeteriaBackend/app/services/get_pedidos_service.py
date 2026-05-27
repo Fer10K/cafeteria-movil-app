@@ -79,7 +79,7 @@ class BaristaService:
             query_pedidos = """
                 SELECT pedido_id, usuario_id, estado, monto_total 
                 FROM public.pedidos 
-                WHERE estado IN ('PROCESANDO', 'LISTO')
+                WHERE estado IN ('PENDIENTE_PAGO', 'PROCESANDO', 'LISTO')
                 ORDER BY fecha_creacion ASC;
             """
             cursor.execute(query_pedidos)

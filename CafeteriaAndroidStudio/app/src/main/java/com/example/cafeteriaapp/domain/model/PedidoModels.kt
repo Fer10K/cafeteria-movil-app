@@ -33,6 +33,13 @@ data class PedidoResponse(
     @SerializedName("fecha_creacion") val fechaCreacion: String,
     @SerializedName("mensaje") val mensaje: String
 )
+
+
+data class PedidoStatusResponse(
+    val pedido_id: String,
+    val estado: String,
+    val mensaje: String
+)
 fun List<ProductoModificado>.toNetworkPayload(usuarioId: String, metodoPago: String): PedidoCreateRequest {
     val itemsRequest = this.map { itemLocal ->
         ItemPedidoRequest(

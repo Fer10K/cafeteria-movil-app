@@ -9,8 +9,7 @@ import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "http//10.255.244.236:8000"
-
+    private const val BASE_URL = "https://cafeteria-movil-app.onrender.com"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

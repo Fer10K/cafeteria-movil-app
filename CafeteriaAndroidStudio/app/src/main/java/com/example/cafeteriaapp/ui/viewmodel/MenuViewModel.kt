@@ -16,6 +16,7 @@ import com.example.cafeteriaapp.domain.model.OpcionExtraResponse
 import com.example.cafeteriaapp.domain.model.ProductoModificado
 import com.example.cafeteriaapp.domain.model.ProductoResponse
 import com.example.cafeteriaapp.domain.model.toNetworkPayload
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -327,6 +328,36 @@ class MenuViewModel: ViewModel() {
     }
     fun resetPedidoState() {
         pedidoNetworkState = PedidoNetworkState.Idle
+    }
+
+    private val _estadoPagoEfectivo = MutableStateFlow<String>("PENDIENTE_PAGO")
+    val estadoPagoEfectivo: StateFlow<String> = _estadoPagoEfectivo
+
+    fun iniciarMonitoreoPedido(pedidoId: String) {
+        viewModelScope.launch {
+            var pagoConfirmado = false
+            _estadoPagoEfectivo.value = "PENDIENTE_PAGO"
+
+            while (!pagoConfirmado) {
+                delay(4000)
+                try {
+                    val respuesta = RetrofitClient.apiService.verificarEstadoPedido(pedidoId)
+                    if (respuesta.isSuccessful && respuesta.body() != null) {
+                        val estadoActual = respuesta.body()!!.estado
+
+                        if (estadoActual == "PROCESANDO") {
+                            pagoConfirmado = true
+                            _estadoPagoEfectivo.value = "PROCESANDO"
+                        } else if (estadoActual == "CANCELADO" || estadoActual == "RECHAZADO") {
+                            pagoConfirmado = true
+                            _estadoPagoEfectivo.value = estadoActual
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("❌ Error en polling de ViewModel: ${e.message}")
+                }
+            }
+        }
     }
 }
 

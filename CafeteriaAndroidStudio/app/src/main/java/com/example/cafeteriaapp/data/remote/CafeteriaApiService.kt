@@ -13,7 +13,7 @@ import com.example.cafeteriaapp.domain.model.PedidoBaristaResponse
 import com.example.cafeteriaapp.domain.model.PedidoCreateRequest
 import com.example.cafeteriaapp.domain.model.PedidoResponse
 import com.example.cafeteriaapp.domain.model.ProductoResponse
-import com.example.cafeteriaapp.ui.screen.PedidoStatusResponse
+import com.example.cafeteriaapp.domain.model.PedidoStatusResponse
 import retrofit2.Response
 
 import retrofit2.http.Body
@@ -89,5 +89,8 @@ interface CafeteriaApiService {
 
     @GET("barista/pedidos/cancelados")
     suspend fun obtenerPedidosCancelados(): Response<List<PedidoBaristaResponse>>
+
+    @GET("api/barista/pedidos/por-confirmar")
+    suspend fun obtenerPedidosPorConfirmar(): Response<List<PedidoBaristaResponse>>
 
 }

@@ -27,7 +27,6 @@ import kotlinx.coroutines.delay
 
 
 // Agrégalo al final de tu archivo CartScreen.kt (Fuera del Composable)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
@@ -44,24 +43,19 @@ fun CartScreen(
     val recomendacionIa by menuViewModel.recomendacionIaState.collectAsState()
     var mostrarBanner by remember { mutableStateOf(true) }
 
+    // 🚀 CORRECCIÓN 1: Declarar el observador del flujo del ViewModel aquí arriba
+    val estadoPago by menuViewModel.estadoPagoEfectivo.collectAsState()
 
     LaunchedEffect(key1 = CarritoRepository.items.size) {
-        mostrarBanner = true // Si agrega un ítem nuevo, volvemos a habilitar la visibilidad
+        mostrarBanner = true
         menuViewModel.cargarSugerenciaMaridaje(uidDinamico)
     }
 
-    // Al destruir o salir de la pantalla del Carrito, limpiamos el flujo del StateFlow
     DisposableEffect(Unit) {
         onDispose {
             menuViewModel.limpiarRecomendacion()
         }
     }
-
-    RecomendacionIaCard(
-        mensaje = recomendacionIa,
-        visible = mostrarBanner,
-        onCloseClick = { mostrarBanner = false }
-    )
 
     var mostrarOpcionesPago by remember { mutableStateOf(false) }
     var procesandoNFC by remember { mutableStateOf(false) }
@@ -70,6 +64,23 @@ fun CartScreen(
     var idPedidoCreado by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
+
+    // 🚀 CORRECCIÓN 2: Sacar el LaunchedEffect del 'if' y manejar la reactividad en la raíz
+    LaunchedEffect(estadoPago) {
+        // Solo reaccionamos si el usuario realmente está esperando un pago en efectivo
+        if (procesandoEfectivo && idPedidoCreado != null) {
+            when (estadoPago) {
+                "PROCESANDO" -> {
+                    procesandoEfectivo = false
+                    pagoExitoso = true
+                }
+                "CANCELADO", "RECHAZADO" -> {
+                    procesandoEfectivo = false
+                    // Opcional: Mostrar un Toast informando la cancelación en caja
+                }
+            }
+        }
+    }
 
     if (procesandoNFC) {
         LaunchedEffect(Unit) {
@@ -111,8 +122,16 @@ fun CartScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            // El componente flotante de recomendación (puedes meterlo dentro de la columna o Scaffold)
+            RecomendacionIaCard(
+                mensaje = recomendacionIa,
+                visible = mostrarBanner,
+                onCloseClick = { mostrarBanner = false }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             if (itemsCarrito.isEmpty()) {
-                // --- ESTADO VACÍO ---
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
@@ -128,7 +147,6 @@ fun CartScreen(
                     Text("Tu carrito está vacío", fontSize = 20.sp, color = Color.Gray)
                 }
             } else {
-                // --- LISTA DE PRODUCTOS ---
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -170,7 +188,6 @@ fun CartScreen(
                     }
                 }
 
-                // --- FOOTER CON BOTÓN CONFIRMAR ---
                 Spacer(modifier = Modifier.height(16.dp))
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -191,7 +208,7 @@ fun CartScreen(
                             )
                         }
                         Button(
-                            onClick = { mostrarOpcionesPago = true }, // 💡 Abre la selección de método de pago
+                            onClick = { mostrarOpcionesPago = true },
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Confirmar Pedido", fontWeight = FontWeight.Bold)
@@ -212,9 +229,7 @@ fun CartScreen(
                 Button(
                     onClick = {
                         mostrarOpcionesPago = false
-                        // Lanzamos la petición a la API
                         menuViewModel.enviarPedidoAlServidor(usuarioId = uidDinamico, metodoPago = "NFC") { idGenerado ->
-                            // Cuando la API responda con éxito, activamos la pantalla de espera NFC local
                             procesandoNFC = true
                         }
                     }
@@ -226,11 +241,10 @@ fun CartScreen(
                 Button(
                     onClick = {
                         mostrarOpcionesPago = false
-                        // Lanzamos la petición a la API
                         menuViewModel.enviarPedidoAlServidor(usuarioId = uidDinamico, metodoPago = "EFECTIVO") { idGenerado ->
-                            // Al responder con éxito, guardamos el ID real de la base de datos y empezamos el bucle de escucha
                             idPedidoCreado = idGenerado
                             procesandoEfectivo = true
+                            menuViewModel.iniciarMonitoreoPedido(idGenerado)
                         }
                     }
                 ) {
@@ -240,10 +254,10 @@ fun CartScreen(
         )
     }
 
-    // 2. Diálogo de Espera NFC (Simulación de lectura de hardware)
+    // 2. Diálogo de Espera NFC
     if (procesandoNFC) {
         AlertDialog(
-            onDismissRequest = { }, // Evita que el usuario lo cierre tocando afuera
+            onDismissRequest = { },
             title = { Text("Procesando Pago", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
@@ -257,93 +271,27 @@ fun CartScreen(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
-                    Text(
-                        text = "Acerque su teléfono a la terminal de la cafetería.",
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
                 }
             },
             confirmButton = {}
         )
-        LaunchedEffect(Unit) {
-            delay(3000)
-            procesandoNFC = false
-            pagoExitoso = true
-        }
     }
 
+    // Diálogo de Pago Exitoso
     if (pagoExitoso) {
         AlertDialog(
             onDismissRequest = { },
             title = { Text("¡Pago Exitoso!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary) },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Text("El pago simulado se ha procesado correctamente.")
+                    Text("El pago se ha procesado correctamente.")
                     Text("Tu pedido ha sido enviado a la cocina de la cafetería.", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Redirigiendo al menú principal...", fontSize = 12.sp, color = Color.Gray)
                 }
             },
             confirmButton = {}
         )
     }
-    // MONITOREO DEL PEDIDO EN EFECTIVO
-    if (procesandoEfectivo && idPedidoCreado != null) {
-        LaunchedEffect(idPedidoCreado) {
-            var pagoConfirmadoPorBarista = false
 
-            while (!pagoConfirmadoPorBarista) {
-                delay(4000) // Consulta al servidor cada 4 segundos para no saturar tu API
-
-                try {
-                    val respuesta = RetrofitClient.apiService.verificarEstadoPedido(idPedidoCreado!!)
-
-                    if (respuesta.isSuccessful && respuesta.body() != null) {
-                        val statusResponse = respuesta.body()!!
-
-                        println("🔍 [POLLING] Consultando pedido ${idPedidoCreado}. Estado en backend: ${statusResponse.estado}")
-
-                        // Evaluamos el estado exacto que configuramos en el Backend
-                        when (statusResponse.estado) {
-                            "PROCESANDO" -> {
-                                // ¡El barista ya lo aceptó!
-                                pagoConfirmadoPorBarista = true
-                                procesandoEfectivo = false
-
-                                try {
-                                    val requestGami = com.example.cafeteria.data.model.ProcesarCompraRequest(
-                                        usuario_id = uidDinamico,
-                                        monto_total = total,
-                                        cantidad_productos = itemsCarrito.sumOf { it.cantidad },
-                                        es_primer_compra_dia = false
-                                    )
-                                    RetrofitClient.apiService.procesarCompra(requestGami)
-                                } catch (e: Exception) {
-                                    println("❌ Error al otorgar XP en pago por caja: ${e.message}")
-                                }
-
-                                pagoExitoso = true // Detona tu animación, popBackStack, etc.
-                            }
-                            "RECHAZADO", "CANCELADO" -> {
-                                procesandoEfectivo = false
-                                // Opcional: mostrar un Toast o diálogo de error al alumno
-                                break
-                            }
-                            "PENDIENTE_PAGO" -> {
-                                // No hace nada, sigue el ciclo 'while' y vuelve a preguntar en 4 segundos
-                            }
-                        }
-                    } else {
-                        println("⚠️ [POLLING] El servidor respondió con un error: ${respuesta.code()}")
-                    }
-                } catch (e: Exception) {
-                    println("❌ [POLLING ERROR] Error al consultar estado: ${e.message}")
-                }
-            }
-        }
-    }
     // 3. Diálogo de Espera para Pago en Efectivo
     if (procesandoEfectivo) {
         AlertDialog(
@@ -362,7 +310,7 @@ fun CartScreen(
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "Por favor, acércate a la caja de la cafetería y proporciona tu nombre para liquidar tu cuenta.",
+                        text = "Por favor, acércate a la caja de la cafetería para liquidar tu cuenta.",
                         fontSize = 13.sp,
                         color = Color.Gray,
                         modifier = Modifier.padding(top = 8.dp),
@@ -374,8 +322,3 @@ fun CartScreen(
         )
     }
 }
-data class PedidoStatusResponse(
-    val pedido_id: String,
-    val estado: String,
-    val mensaje: String
-)
