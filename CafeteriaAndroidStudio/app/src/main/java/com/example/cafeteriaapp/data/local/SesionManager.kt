@@ -6,10 +6,11 @@ import android.content.SharedPreferences
 class SessionManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("PruebaSession", Context.MODE_PRIVATE)
 
-    fun guardarSession(uid: String, rol: String) {
+    fun guardarSession(uid: String, rol: String, nombre: String) {
         prefs.edit().apply {
             putString("KEY_USER_ID", uid)
             putString("KEY_ROL", rol)
+            putString("USER_NAME", nombre)
             apply()
         }
     }
@@ -20,6 +21,10 @@ class SessionManager(context: Context) {
 
     fun obtenerRol(): String {
         return prefs.getString("KEY_ROL", "cliente") ?: "cliente"
+    }
+
+    fun obtenerNombre(): String {
+        return prefs.getString("USER_NAME", "Cliente") ?: "Cliente"
     }
 
     fun cerrarSession() {

@@ -18,7 +18,7 @@ import com.example.cafeteriaapp.ui.viewmodel.LoginUiState
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel = viewModel(),
-    onLoginExitoso: (String, String) -> Unit,
+    onLoginExitoso: (String, String, String) -> Unit,
     onIrARegistro: () -> Unit
 ) {
     var correo by remember { mutableStateOf("") }
@@ -111,7 +111,7 @@ fun LoginScreen(
             when (val state = loginState) {
                 is LoginUiState.Success -> {
                     LaunchedEffect(state) {
-                        onLoginExitoso(state.usuarioId, state.role)
+                        onLoginExitoso(state.usuarioId, state.role, state.nombre)
                     }
                 }
                 is LoginUiState.Error -> {

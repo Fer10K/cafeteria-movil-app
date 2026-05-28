@@ -16,6 +16,7 @@ class ItemPedidoResponse(BaseModel):
 class PedidoBaristaResponse(BaseModel):
     pedido_id: str
     usuario_id: str
+    nombre_usuario: str
     estado: str
     monto_total: float
     productos: List[ItemPedidoResponse]

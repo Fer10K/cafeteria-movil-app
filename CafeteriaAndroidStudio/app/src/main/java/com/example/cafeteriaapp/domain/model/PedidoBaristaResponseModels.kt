@@ -6,6 +6,7 @@ import com.google.gson.annotations.SerializedName
 data class PedidoBaristaResponse(
     @SerializedName("pedido_id") val pedidoId: String,
     @SerializedName("usuario_id") val usuarioId: String,
+    @SerializedName("nombre_usuario") val nombreUsuario: String,
     @SerializedName("estado") val estado: String,
     @SerializedName("monto_total") val montoTotal: Double,
     @SerializedName("productos") val productos: List<ItemPedidoResponse>

@@ -28,7 +28,6 @@ class BaristaService:
             
             lista_productos = []
 
-            # 2. Consultar los extras de cada producto hallado
             for item in lista_items_bd:
                 item_id = item.get("id")
 
@@ -59,7 +58,8 @@ class BaristaService:
             respuesta_final.append(
                 PedidoBaristaResponse(
                     pedido_id=p_id,
-                    usuario_id=str(ped.get("usuario_id")),
+                    usuario_id=ped.get("usuario_id"),
+                    nombre_usuario=ped.get("nombre_usuario"),
                     estado=ped.get("estado"),
                     monto_total=float(ped.get("monto_total")),
                     productos=lista_productos
@@ -88,6 +88,21 @@ class BaristaService:
             if not lista_pedidos_bd:
                 cursor.close()
                 return []
+
+            for pedido in lista_pedidos_bd:
+                uuid = pedido.get("usuario_id")
+
+                query_nom = """
+                    SELECT nombre
+                    FROM public.usuarios
+                    WHERE id = %s;
+                """
+
+                cursor.execute(query_nom, (uuid,))
+                nombre_db = cursor.fetchone()
+                nombre_cliente = nombre_db["nombre"] if nombre_db else "Cliente Desconocido"
+
+                pedido["nombre_usuario"] = nombre_cliente
 
             respuesta = self._mapear_estructura_pedidos(cursor, lista_pedidos_bd)
             cursor.close()

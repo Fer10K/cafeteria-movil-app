@@ -25,6 +25,8 @@ import com.example.cafeteriaapp.ui.viewmodel.PerfilUiState
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.material3.ProgressIndicatorDefaults
+import androidx.compose.ui.platform.LocalContext
+import com.example.cafeteriaapp.data.local.SessionManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +38,11 @@ fun PerfilScreen(
     val pState by viewModel.perfilState.collectAsState()
     val aiUiState by viewModel.aiState.collectAsState()
     var mostrarBanner by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+
+    val sessionManager = remember { SessionManager(context) }
+
+    val nombreUsuario = remember { sessionManager.obtenerNombre() ?: "Cliente" }
 
     LaunchedEffect(usuarioId) {
         if (usuarioId.isNotEmpty()) {
@@ -95,11 +102,10 @@ fun PerfilScreen(
                             val miXp = state.xpPropia
                             val miNivel = state.nivelPropio
 
-                            // 📊 CÁLCULO DE GAMIFICACIÓN DINÁMICO (Asumiendo que cada nivel requiere 1000 XP)
                             val xpDelNivelActual = miXp % 1000
                             val progresoFlotante = xpDelNivelActual.toFloat() / 1000f
 
-                            // 🎨 DEGRADADO PREMIUM CON TUS COLORES DE SISTEMA
+                            // DEGRADADO PREMIUM CON TUS COLORES DE SISTEMA
                             val degradadoPremium = Brush.horizontalGradient(
                                 colors = listOf(
                                     MaterialTheme.colorScheme.primaryContainer,
@@ -107,7 +113,7 @@ fun PerfilScreen(
                                 )
                             )
 
-                            // 🌟 NUEVA TARJETA DE PERFIL IMPACTANTE
+                            // NUEVA TARJETA DE PERFIL IMPACTANTE
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -141,7 +147,7 @@ fun PerfilScreen(
                                                     fontWeight = FontWeight.SemiBold
                                                 )
                                                 Text(
-                                                    text = "Miembro Cafetería",
+                                                    text = nombreUsuario,
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     color = MaterialTheme.colorScheme.onPrimaryContainer

@@ -7,12 +7,15 @@ import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.cafeteriaapp.data.local.SessionManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,6 +23,9 @@ fun SettingsScreen(
     onCerrarSesion: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val nombreUsuario = remember { sessionManager.obtenerNombre() ?: "Miembro Cafetería" }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -57,7 +63,7 @@ fun SettingsScreen(
                     Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(40.dp))
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text("Fernando", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(nombreUsuario, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text("Usuario Coffee Pro", fontSize = 14.sp, color = Color.Gray)
                     }
                 }
@@ -80,7 +86,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             Text(
-                text = "Cafetherian App v1.0.4\nHecho con ❤️ para la cafetería",
+                text = "Cafetherian App v1.0.4\nHecho con café y ❤️ para la cafetería",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 fontSize = 12.sp,

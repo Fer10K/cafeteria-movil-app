@@ -67,8 +67,8 @@ fun MainApp() {
         // --- PANTALLA DE LOGIN ---
         composable(Destinos.LOGIN) {
             LoginScreen(
-                onLoginExitoso = { uuidObtenido, rolObtenido ->
-                    sessionManager.guardarSession(uuidObtenido, rolObtenido)
+                onLoginExitoso = { uuidObtenido, rolObtenido , nombreObtenido->
+                    sessionManager.guardarSession(uuidObtenido, rolObtenido, nombreObtenido)
 
                     if (sessionManager.obtenerRol() == "barista") {
                         navController.navigate(Destinos.BARISTA_HOME) {

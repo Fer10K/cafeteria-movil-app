@@ -194,12 +194,7 @@ fun PedidoCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // Encabezado: Usuario y Total
-            Text(
-                text = "ID Usuario: ${pedido.usuarioId.take(8)}...", // Reemplazable por nombre_usuario después
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Text(text = "Cliente: ${pedido.nombreUsuario}", style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = "Total: $${String.format("%.2f", pedido.montoTotal)}",
                 style = MaterialTheme.typography.bodyMedium,

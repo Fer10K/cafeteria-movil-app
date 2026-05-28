@@ -171,7 +171,6 @@ class BaristaViewModel : ViewModel() {
             override fun onMessage(webSocket: WebSocket, text: String) {
                 android.util.Log.d("CAFETERIA_WS", "☕ Mensaje recibido desde Render: $text")
 
-                // En cuanto el servidor avise que hay un pedido nuevo, forzamos recarga de la lista general
                 cargarPedidos()
             }
 
