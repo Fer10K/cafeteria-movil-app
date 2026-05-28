@@ -2,9 +2,8 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from typing import List
-from fastapi import HTTPException, status, BackgroundTasks
+from fastapi import HTTPException, status
 from app.schemas.get_pedidos_schema import PedidoBaristaResponse, ItemPedidoResponse, ExtraResponse
-from app.supertopsecretutils import enviar_correo_pedido_listo
 
 class BaristaService:
     def __init__(self):
@@ -262,15 +261,12 @@ class BaristaService:
             if conn:
                 conn.close()
 
-    async def cambiar_estado_pedido(self, pedido_id: str, nuevo_estado: str, background_tasks: BackgroundTasks) -> bool:
+    async def cambiar_estado_pedido(self, pedido_id: str, nuevo_estado: str) -> bool:
         """Modifica el estado de un pedido específico en PostgreSQL."""
         conn = None
         try:
             conn = psycopg2.connect(os.getenv("DATABASE_URL"))
             cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-            if nuevo_estado == "LISTO":
-                background_tasks.add_task(enviar_correo_pedido_listo, pedido_id)
 
             query_update = """
                 UPDATE public.pedidos 

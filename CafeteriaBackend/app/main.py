@@ -1,11 +1,11 @@
 import os
 import traceback
 from typing import List
-from fastapi import FastAPI, HTTPException, Request, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, status, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# Servicios actualizados a PostgreSQL nativo
+# Servicios actualizados
 from app.services.ai_service import AIService
 from app.services.gamification_service import GamificationService
 from app.services.auth_service import AuthService
@@ -13,6 +13,7 @@ from app.services.product_service import ProductoService
 from app.services.pedido_service import PedidoService
 from app.services.get_pedidos_service import BaristaService
 from app.services.websocket_manager import barista_manager
+from app.supertopsecretutils import enviar_correo_pedido_listo
 
 # Esquemas Pydantic
 from app.schemas.ai_schema import RecomendacionRequest, RecomendacionResponse
@@ -191,9 +192,14 @@ async def obtener_pedidos_barista():
 
 
 @app.patch("/barista/pedidos/{pedido_id}/estado", tags=["Barista"])
-async def actualizar_estado_pedido(pedido_id: str, nuevo_estado: str):
+async def actualizar_estado_pedido(pedido_id: str, nuevo_estado: str, background_tasks: BackgroundTasks):
     """Modifica el estado de avance de una orden de la barra."""
+
+    if nuevo_estado == "LISTO":
+        background_tasks.add_task(enviar_correo_pedido_listo, pedido_id)
+
     exito = await barista_service.cambiar_estado_pedido(pedido_id, nuevo_estado)
+
     if not exito:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
