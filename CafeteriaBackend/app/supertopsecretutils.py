@@ -59,7 +59,7 @@ def enviar_correo_pedido_listo(pedido_id: str):
         """
         msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
 
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP('smtp.gmail.com', 465)
         server.starttls()  # Cifrado seguro
         server.login(remitente, password)
         server.sendmail(remitente, destinatario, msg.as_string())
