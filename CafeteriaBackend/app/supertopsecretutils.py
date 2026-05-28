@@ -39,7 +39,7 @@ def enviar_correo_pedido_listo(pedido_id: str):
         destinatario = usuario["correo"]
 
         if not remitente or not password:
-            print("❌ Error: SMTP_USER o SMTP_PASSWORD no configurados en el entorno.")
+            print("Error: SMTP_USER o SMTP_PASSWORD no configurados en el entorno.")
             return
 
         # 4. Construcción del cuerpo del correo (MIME)
