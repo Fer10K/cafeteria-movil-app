@@ -59,7 +59,6 @@ def enviar_correo_pedido_listo(pedido_id: str):
         """
         msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
 
-        # 5. Conexión segura con los servidores de Google (Puerto 587 TLS)
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()  # Cifrado seguro
         server.login(remitente, password)
