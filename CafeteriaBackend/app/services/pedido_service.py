@@ -56,7 +56,8 @@ class PedidoService:
                 detail="Error interno al consultar el estado del pedido."
             )
         finally:
-            if conn: conn.close()
+            if conn:
+                conn.close()
 
 
     async def procesar_pedido_real(self, pedido: PedidoCreateRequest) -> PedidoResponse:
@@ -138,14 +139,16 @@ class PedidoService:
 
         except Exception as e:
             # En caso de cualquier falla (llaves foráneas, desconexiones), deshacemos todo lo afectado en este intento
-            if conn: conn.rollback()
+            if conn:
+                conn.rollback()
             print(f"Error crítico guardando la transacción del pedido: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"No se pudo registrar la comanda: {str(e)}"
             )
         finally:
-            if conn: conn.close()
+            if conn:
+                conn.close()
 
 
         try:

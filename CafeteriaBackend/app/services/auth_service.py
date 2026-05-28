@@ -116,14 +116,16 @@ class AuthService:
             )
 
         except psycopg2.IntegrityError as e:
-            if conn: conn.rollback()
+            if conn:
+                conn.rollback()
             print(f"Error de integridad (posible correo duplicado): {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El correo electrónico ya se encuentra registrado."
             )
         except Exception as e:
-            if conn: conn.rollback()
+            if conn:
+                conn.rollback()
             print(f"Error en el proceso de registro: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

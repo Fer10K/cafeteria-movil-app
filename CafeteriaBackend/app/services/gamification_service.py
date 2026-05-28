@@ -112,14 +112,16 @@ class GamificationService:
             }
 
         except Exception as e:
-            if conn: conn.rollback()
+            if conn:
+                conn.rollback()
             print(f"Error en procesar_transaccion gamificación: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error al procesar la gamificación: {str(e)}"
             )
         finally:
-            if conn: conn.close()
+            if conn:
+                conn.close()
 
     async def obtener_perfile_individual(self, usuario_id: str) -> dict:
         """Obtiene los niveles, XP y lista de logros desbloqueados de un alumno específico."""
@@ -173,7 +175,8 @@ class GamificationService:
                 detail="Error al obtener los datos de perfil."
             )
         finally:
-            if conn: conn.close()
+            if conn:
+                conn.close()
 
     async def obtener_perfiles_general(self, usuario_id: str) -> list:
         """Retorna el Leaderboard global ordenado por XP, excluyendo al usuario actual."""
@@ -214,4 +217,5 @@ class GamificationService:
                 detail="Error al cargar la tabla de posiciones."
             )
         finally:
-            if conn: conn.close()
+            if conn:
+                conn.close()

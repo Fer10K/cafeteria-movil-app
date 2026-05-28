@@ -2,12 +2,12 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from typing import List
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, BackgroundTasks
 from app.schemas.get_pedidos_schema import PedidoBaristaResponse, ItemPedidoResponse, ExtraResponse
+from app.supertopsecretutils import enviar_correo_pedido_listo
 
 class BaristaService:
     def __init__(self):
-        # Eliminamos la dependencia directa con el cliente global de Supabase
         pass
 
     def _mapear_estructura_pedidos(self, cursor, lista_pedidos_bd: list) -> List[PedidoBaristaResponse]:
@@ -214,14 +214,18 @@ class BaristaService:
                 detail="Error interno al consultar los pedidos cancelados."
             )
         finally:
-            if conn: conn.close()
+            if conn:
+                conn.close()
 
-    async def cambiar_estado_pedido(self, pedido_id: str, nuevo_estado: str) -> bool:
+    async def cambiar_estado_pedido(self, pedido_id: str, nuevo_estado: str, background_tasks: BackgroundTasks) -> bool:
         """Modifica el estado de un pedido específico en PostgreSQL."""
         conn = None
         try:
             conn = psycopg2.connect(os.getenv("DATABASE_URL"))
             cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+            if nuevo_estado == "LISTO":
+                background_tasks.add_task(enviar_correo_pedido_listo, pedido_id)
 
             query_update = """
                 UPDATE public.pedidos 
@@ -238,8 +242,10 @@ class BaristaService:
             
             return filas_afectadas > 0
         except Exception as e:
-            if conn: conn.rollback()
+            if conn:
+                conn.rollback()
             print(f"Error al actualizar estado del pedido {pedido_id}: {str(e)}")
             return False
         finally:
-            if conn: conn.close()
+            if conn:
+                conn.close()
