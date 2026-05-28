@@ -137,6 +137,21 @@ class BaristaService:
                 cursor.close()
                 return []
 
+            for pedido in lista_pedidos_bd:
+                uuid = pedido.get("usuario_id")
+
+                query_nom = """
+                    SELECT nombre
+                    FROM public.usuarios
+                    WHERE id = %s;
+                """
+
+                cursor.execute(query_nom, (uuid,))
+                nombre_db = cursor.fetchone()
+                nombre_cliente = nombre_db["nombre"] if nombre_db else "Cliente Desconocido"
+
+                pedido["nombre_usuario"] = nombre_cliente
+
             respuesta = self._mapear_estructura_pedidos(cursor, lista_pedidos_bd)
             cursor.close()
             return respuesta
@@ -170,6 +185,21 @@ class BaristaService:
                 cursor.close()
                 return []
 
+            for pedido in lista_pedidos_bd:
+                uuid = pedido.get("usuario_id")
+
+                query_nom = """
+                    SELECT nombre
+                    FROM public.usuarios
+                    WHERE id = %s;
+                """
+
+                cursor.execute(query_nom, (uuid,))
+                nombre_db = cursor.fetchone()
+                nombre_cliente = nombre_db["nombre"] if nombre_db else "Cliente Desconocido"
+
+                pedido["nombre_usuario"] = nombre_cliente
+
             respuesta = self._mapear_estructura_pedidos(cursor, lista_pedidos_bd)
             cursor.close()
             return respuesta
@@ -202,6 +232,21 @@ class BaristaService:
             if not lista_pedidos_bd:
                 cursor.close()
                 return []
+
+            for pedido in lista_pedidos_bd:
+                uuid = pedido.get("usuario_id")
+
+                query_nom = """
+                    SELECT nombre
+                    FROM public.usuarios
+                    WHERE id = %s;
+                """
+
+                cursor.execute(query_nom, (uuid,))
+                nombre_db = cursor.fetchone()
+                nombre_cliente = nombre_db["nombre"] if nombre_db else "Cliente Desconocido"
+
+                pedido["nombre_usuario"] = nombre_cliente
 
             respuesta = self._mapear_estructura_pedidos(cursor, lista_pedidos_bd)
             cursor.close()
